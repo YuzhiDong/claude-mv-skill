@@ -17,7 +17,7 @@ if [ "$KEEP_DEMO" != "--keep-demo" ]; then
 fi
 
 cd "$TARGET"
-echo "== installing p5, p5.brush, puppeteer-core"
+echo "== installing p5, puppeteer-core"
 npm install --silent
 
 echo "== toolchain"

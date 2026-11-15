@@ -16,7 +16,7 @@ Look at the model sheets first:
 
 Every rule below serves one of three goals.
 
-- **Handmade.** The video should look like someone painted it by hand, frame by frame. That means brush strokes, ink lines that boil, flat 2D and no lettering.
+- **Handmade.** It should look drawn by a person, frame by frame: flat colour blocks, ink lines that boil, no gradients, no lettering.
 - **Alive.** Something is always moving and something is always happening. Faces act instead of snapping, and characters are big enough to feel.
 - **One piece.** It's one short film, not a pile of clips. Plan it before you draw it, and link every scene to the next.
 
@@ -24,12 +24,12 @@ Underneath all three, the viewer has to be able to follow it. Timing (rule 4) is
 
 ## The rules
 
-### 1. The medium is solid: brush strokes, flat 2D, boil
+### 1. The medium is solid: flat colour blocks, 2D, boil
 
-- **Paint everything with p5.brush through `paint()` and `inkLine()`.** Characters get flat `wash` colour plus an ink outline. Backgrounds get soft watercolour `fill` shapes, usually with no outline or a thin one. Never use plain p5 shapes (`rect`, `ellipse`, `fill()`): they look like 2000s Flash.
+- **Paint everything with `paint()` and `inkLine()`.** Everything is a flat colour block plus an ink outline: characters, props, walls, sky. Shading is two or three stacked tones, never a gradient. Never use plain p5 shapes (`rect`, `ellipse`, `fill()`): they bypass the boil and look like 2000s Flash.
 - **The linework boils.** `jit()` and `random()` are reseeded 12 times a second (`BOIL`), so every drawing wobbles slightly, like hand-drawn animation. That's the look; don't fight it. For anything that must stay put from frame to frame (star positions, tuft heights), use `hash(i)`. Give each separate element its own seed with `boilSeed(key)` (see Engine), or one moving thing makes everything drawn after it jitter.
 - **Everything is flat 2D. Never project 3D.** Don't rotate a box in perspective, don't use `rotateY` or WEBGL 3D and don't fake depth with math. Clawd turns through **drawn key views** (front → 3/4 → side → back 3/4 → back), exactly like a cartoon model sheet: see `turn()` and `spinView()`. Depth comes from overlap, scale and colour (farther = smaller, bluer, paler), never from a projection.
-- **Light is the one exception.** p5.brush mixes colour like pigment, so a yellow glow painted over blue turns green, and a thin wash over it turns grey. Use `glow()` for anything that shines: it adds real light, under the paper grain.
+- **Light is the one exception to flatness.** Use `glow()` for anything that shines: it adds real light on top of the blocks, which is what makes fireworks and lamps read at all.
 - **Soft palette, no pure black or white.** Use `PAL.ink` for black and `PAL.cream` or `PAL.paper` for white. Keep colours soft and harmonious, and keep Clawd clearly readable against the background.
 
 ### 2. No text
@@ -238,86 +238,54 @@ node render.mjs --encode --out=out/video.mp4                    # … then encod
 
 ### Painting
 
-`paint(pts, o)` paints one shape from a point list `[[x, y], ...]`:
+`paint(pts, o)` fills one polygon from a point list `[[x, y], ...]`.
 
 | option | meaning |
 |---|---|
-| `wash, washOp` | flat colour (opacity 0–255, default 255). For characters, props, anything solid. |
-| `fill, fillOp, bleed, tex, border` | watercolour fill with bleeding edges and pigment texture. For skies, hills, shading and shadows. `bleed` ~.05–.3, `tex` ~.3–.9. |
-| `hatch: { d, a, o, b, c, w }` | hatching (distance, angle, `{rand, gradient}`, brush e.g. `'charcoal'`/`'HB'`, colour, weight). Texture, sparingly. |
-| `ink, sw, br` | outline colour (default `PAL.ink`), weight (~.4–2), brush. **`ink: null` means no outline.** |
-| `curv` | 0–1: smooth the outline through the points. |
+| `wash, washOp` | **the colour itself.** One shape, one colour. 255 = opaque; lower values let what is behind show through. |
+| `fill, fillOp` | the second layer: shading and highlights. A shape with **only** `fill` and no `wash` (reflections, puddles, glows) degrades to a translucent colour block. |
+| `ink, sw` | outline colour (default `PAL.ink`) and weight. **`ink: null` means no outline.** |
+| `curv` | accepted but inert: the flat engine connects points with straight segments. |
 
-- **Lines:** `inkLine(pts, sw, colour, brush = 'ink', curvature)`. The kit's brushes are `'ink'`, `'inkfine'` and `'dry'` (bristly). p5.brush's built-ins also work: `'2B'`, `'HB'`, `'charcoal'`, `'marker'`, `'pen'`, `'cpencil'`, `'rotring'`, `'spray'`.
-- **Shapes:**
-  - `rectPts(x, y, w, h, jitter)`
-  - `ellPts(cx, cy, rx, ry, n, jitter, rot)`
-  - `rrPts(x, y, w, h, r, jitter)`: a rounded rectangle
-  - `starPts(cx, cy, r, inner, n, rot)`
-  - `heartPts(cx, cy, r)`
-  - `through(P)`: a smooth curve through the points
-  - `ribbon(P, w0, w1)`: a tapered ribbon along a path, as one outline. Use it for tails, trails, vines and noodly arms.
-- **One shape, one outline.** Build a creature or prop from as few outlines as you can, so it doesn't look like glued-on stickers: a tail is one `ribbon`, not five circles.
-- **Light:** `glow(x, y, r, colour, a)`. It's additive, so it stays warm on dark grounds and barely shows on light ones (as real light would). Draw it before the things that sit in front of the light.
-- **Palette** `PAL`: `paper, ink, clay, clayDk, clayLt, night, indigo, rose, ochre, sap, teal, violet, cream, sky`. `mixCol(a, b, k)` mixes two hex colours in RGB. Any hex colour works: pick a small palette per video.
-- **p5.brush quirks:**
-  - Colours mix like pigment: yellow over blue makes green. Layer light colours over dark ones with a full-opacity `wash`, or use `glow()`.
-  - `wash` at 255 is exact colour; lower opacities mix.
-  - Strokes drawn far from the origin under a zoomed camera collapse: from zoom ~2, an outline or a line at large
-    world coordinates leaves only a dot at its first vertex. `paint()` and `inkLine()` draw each shape around its own
-    centre, which avoids it. A shape much bigger than the canvas can still lose its outline: draw long edges as
-    `inkLine`s no bigger than the canvas.
-  - Outline weight is in world units, so it grows with the camera's zoom: a fine outline on a small shape becomes a
-    dark blob in a close-up. Scale `sw` down with the zoom for small shapes.
-  - A NaN in a point list throws `Failed to construct 'OffscreenCanvas': Value is not of type 'unsigned long'`, with
-    a stack pointing at your scene rather than the NaN. Guard geometry that can degenerate (`Math.acos` of a ratio > 1).
-  - p5 `push()/pop()/translate()/rotate()/scale()` work with all brush calls.
-  - Cost is the number of `fill` shapes and strokes: hundreds are fine, thousands are not. Aim for ≤ 1.5 s per frame. The render log prints ms/frame.
-  - Some scenes make p5.brush log five `WebGL: INVALID_OPERATION ... not from the associated program` warnings once per page. They're harmless (frames come out identical). Any other page error is real.
+`bleed`, `tex`, `border`, `hatch` and `br` still parse, but do nothing. There is no pigment mixing, no edge
+pooling and no paper: a colour is exactly the hex you gave it.
 
-### Flat mode (no paper, no grain)
-
-If the brief says "not watercolour", you don't need a different engine — set `flat: true` in `src/config.js`.
-That skips the paper texture in `draw()` and the multiply grain pass in `composite()`, and swaps in a flat
-neutral ground. Keep `flatFill` to decide how much pigment layering survives: `1` is pure vector-flat, `.5` keeps
-volume without looking painted. Everything else (brushes, `glow`, boiling lines) is unchanged.
-
-**Turning flat mode on means also killing `fill`'s edge-bleed and pigment texture.** `border` (pigment pooling at
-the edge) and `tex` (grain inside the patch) only look natural *on paper*; with the paper gone they read as hard
-cloud-shaped outlines floating over roads and skies — fake fog. Flat mode already sets `BORDER_K = 0` and
-`TEX_K = .25`; compensate by keeping `flatFill` high (start at `.8`), not low.
+- **Lines:** `inkLine(pts, sw, colour, brush, curvature)`. `sw` becomes pixels as `sw * INK_W` (3.2), so `sw: 1`
+  is about 3 px at 1080p. Long-shot outlines want 1-2; close-ups want 0.3-0.6 or the line eats the frame.
+- **Shapes:** `rectPts(x, y, w, h, jitter)`, `ellPts(cx, cy, rx, ry, n, jitter, rot)`,
+  `rrPts(x, y, w, h, r, jitter)`, `starPts`, `heartPts`, `through(P)`, `ribbon(P, w0, w1)`.
+- **One shape, one outline.** Build a creature from as few outlines as you can: a tail is one `ribbon`, not five circles.
+- **Shading, the flat way.** Stack two `wash` layers (a darker one at `washOp` around 120 over the base), or give
+  the shape one `fill` layer. Two or three tones per object reads as volume; more than that starts to look painted.
+- **Light:** `glow(x, y, r, colour, a)`. Additive, so it stays warm on dark grounds and barely shows on light ones.
+  Draw it after the things behind it and before the things in front.
+- **Palette** `PAL`: `paper, ink, clay, clayDk, clayLt, night, indigo, rose, ochre, sap, teal, violet, cream, sky`.
+  `mixCol(a, b, k)` mixes two hex colours in RGB. Any hex works: pick a small palette per video.
+- **Boil stays.** `jit()` and `random()` are reseeded 12 times a second, so every shape wobbles slightly, like
+  hand-drawn animation. That is the look; do not fight it. Anything that must stay put frame to frame (star
+  positions, tuft heights) uses `hash(i)`; each independent element gets its own `boilSeed(key)`.
+- **Cost** is the number of paths. A frame is normally 1-20 ms; if you see hundreds, something is drawing a
+  thousand tiny shapes per frame.
 
 ### The four things that will burn you
 
-These cost four rounds of rework on one video. Read them before you paint a background.
+These cost an afternoon of rework while porting this engine from watercolour to flat.
 
-1. **`wash` is opaque; `fill` is translucent watercolour.** They are not two ways of saying the same thing.
-   A background painted only with `fill` never covers the paper — it reads as washed out and stays pale no matter
-   how dark you make the hex, because one layer of watercolour over paper is *always* light. The fix is to lay down
-   `wash` first and stack `fill` for texture:
+1. **2D canvas puts the origin at the top-left; WEBGL puts it at the centre.** The watercolour build had
+   `translate(-W/2, -H/2)` at the top of `draw()` to wrench the WEBGL origin back to the corner. On a 2D canvas
+   that line shifts *everything* by half the frame. Delete it (and the matching compensation in `flushLetters()`).
 
-   ```js
-   // wrong: pale no matter what colour you give it
-   paint(rectPts(...), { fill: '#233450', fillOp: 255, bleed: .3, tex: .6, ink: null });
-   // right: an opaque base, then watercolour on top of it
-   paint(rectPts(...), { wash: '#233450', washOp: 255,
-                         fill: '#2E4060', fillOp: 70, bleed: .3, tex: .55, border: 1.2, ink: null });
-   ```
+2. **`wash` is the colour; `fill` is only a second layer.** A shape with `wash` shows up. A shape with nothing but
+   `fill` degrades to a translucent block: fine for a puddle or a reflection, wrong for a wall. If a background
+   looks empty, it is usually because everything was written with `fill` and no `wash`.
 
-   Rule of thumb: **backgrounds and anything that must read as "solid" start with `wash`; `fill` is for skies,
-   shading, haze and bleed.** Characters are already `wash`-based inside `clawd()`, which is why they never wash out.
+3. **`INK_W` scales every outline.** `sw` is not pixels: it is multiplied by 3.2. A line that looks right in a wide
+   shot becomes a black bar in a close-up. Scale `sw` down when the camera zooms in, and remember that flat
+   strokes have no taper: for a tapered look, stack two lines of different `sw`.
 
-2. **Colours mix like pigment, so a yellow `fill` over a blue-grey ground turns green.** Anything that must keep
-   its own colour — an umbrella, a costume, a sign — needs `wash: col, washOp: 255` as its base, with `fill` used
-   only for shading and highlights. Painting a yellow umbrella with `fill` over a rainy background gives you a
-   grey-green umbrella and a bug report you can't reproduce.
-
-3. **A shape far bigger than the canvas silently loses its fill.** A background rect of 3920×2280 (twice the
-   canvas) renders as bare paper with no error and no warning. Keep background rects within ~1.5× the canvas;
-   if you need to cover more, tile several of them.
-
-4. **`paint` is deferred but `glow()` calls `flushBrush()`.** `glow` composites immediately, so every paint still
-   queued behind it lands *on top of the light*. Draw the light after the things it lights, not before.
+4. **`karaoke.js` has to be loaded in `studio.html`, after `timeline.js`.** The template shipped without that line
+   for a while; the result is a film with no subtitles at all and no error anywhere. If lyrics vanish, check the
+   script tag before you debug the karaoke data.
 
 ### Time and motion (all pure functions of t)
 

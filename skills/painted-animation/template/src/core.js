@@ -126,7 +126,8 @@ function irisShape(pts, col = PAL.ink, far = 4000) {
 }
 function iris(cx, cy, r, col = PAL.ink) { if (r < 4) paint(rectPts(-60, -60, W + 120, H + 120), { wash: col, ink: null }); else irisShape(ellPts(cx, cy, r, r, 40), col); }
 
-let T = 0, paperG = null, grainC = null, letG = null, glowTex = null, outC = null, outX = null;
+let T = 0, letG = null, glowTex = null, outC = null, outX = null;
+const INK_W = 3.2;            // inkLine 的 sw 换算成 canvas 线宽的系数（标定过：sw=1 ≈ 3px）
 let LETTERS = [];
 
 // ---------- geometry ----------
@@ -183,38 +184,60 @@ function centred(pts, draw) {
   push(); translate(cx, cy); draw(pts.map(([x, y]) => [x - cx, y - cy])); pop();
 }
 function paint(pts, o = {}) { centred(pts, (P) => paintAt(P, o)); }
-// STYLE 三档（window.STYLE，由 render.mjs --style 注入）：
-//   'A' 纯平   —— 只留一层纯色，关掉所有明暗填充。色块硬边，最像矢量动画
-//   'B' 体积   —— 纯色 + 同色系明暗层（默认）。有体积但边缘仍是色块
-//   'C' 描边   —— B 再加一圈墨线勾边。赛璐璐／漫画感
+// 平面版：一次路径一次填色，没有笔刷、没有渗化、没有颜料混色。
+// 调色板里给什么就画什么，黄叠在蓝上还是黄——这一条从根上消灭了"黄伞变绿"那类问题。
+function tracePath(c, pts) {
+  c.beginPath();
+  c.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
+  c.closePath();
+}
 function paintAt(pts, o) {
-  const ST = window.STYLE || 'B';
-  if (o.wash || o.fill || o.hatch) {
-    if (o.wash) brush.wash(o.wash, o.washOp ?? 255); else brush.noWash();
-    // A 档不要明暗：一层纯色到底，避免色块内部出现"软阴影"
-    if (o.fill && ST !== 'A') { brush.fill(o.fill, (o.fillOp ?? 170) * (window.FILL_K ?? 1)); brush.fillBleed(o.bleed ?? .1); brush.fillTexture((o.tex ?? .4) * (window.TEX_K ?? 1), (o.border ?? .35) * (window.BORDER_K ?? 1)); } else brush.noFill();
-    if (o.hatch) { brush.hatch(o.hatch.d, o.hatch.a, o.hatch.o || { rand: .15 }); brush.hatchStyle(o.hatch.b || 'HB', o.hatch.c || PAL.ink, o.hatch.w || 1); } else brush.noHatch();
-    brush.noStroke();
-    if (o.curv) { brush.beginShape(o.curv); for (const p of pts) brush.vertex(p[0], p[1]); brush.endShape(true); }
-    else brush.polygon(pts);
+  if (!pts || pts.length < 2) return;
+  const c = drawingContext;
+  // 只认 wash：纯色块。fill 是水彩的"第二层明暗"，平面版不需要它。
+  if (o.wash) {
+    tracePath(c, pts);
+    c.globalAlpha = clamp((o.washOp ?? 255) / 255);
+    c.fillStyle = o.wash;
+    c.fill();
+    c.globalAlpha = 1;
+  } else if (o.fill) {
+    // 只有 fill 没有 wash 的形状（反光、柔光、水渍）在平面版里退化成同色的浅层
+    tracePath(c, pts);
+    c.globalAlpha = clamp((o.fillOp ?? 170) / 255);
+    c.fillStyle = o.fill;
+    c.fill();
+    c.globalAlpha = 1;
   }
-  // the outline is one continuous tapered stroke, not a stroke per side
-  // C 档额外给"实体"补边：不透明的层（washOp ≥ 200）就算场景里写了 ink:null 也要勾出来，
-  // 半透明的氛围层（雨幕、光晕、水渍）跳过，否则整张画面全是黑框。
-  let forceInk = false;
-  if (ST === 'C' && (o.washOp ?? 0) >= 200) {
-    // 尺寸门槛：火星、光点、小碎块不勾边，否则天空里全是小黑圈
-    let mnx = 1e9, mxx = -1e9, mny = 1e9, mxy = -1e9;
-    for (const p of pts) { if (p[0] < mnx) mnx = p[0]; if (p[0] > mxx) mxx = p[0]; if (p[1] < mny) mny = p[1]; if (p[1] > mxy) mxy = p[1]; }
-    forceInk = Math.max(mxx - mnx, mxy - mny) >= 26;
-  }
-  if (o.ink !== null || forceInk) {
-    brush.noWash(); brush.noFill(); brush.noHatch(); brush.set(o.br || 'ink', o.ink || PAL.ink, o.sw ?? (forceInk ? 1.6 : 1));
-    brush.beginShape(o.curv || 0); for (const p of pts) brush.vertex(p[0], p[1]); brush.endShape(true);
+  // 轮廓：默认画（和原来 ink !== null 的语义一致），场景写 ink: null 就不画
+  if (o.ink !== null) {
+    tracePath(c, pts);
+    c.strokeStyle = o.ink || PAL.ink;
+    c.lineWidth = Math.max(.6, (o.sw ?? 1) * INK_W);
+    c.lineJoin = 'round'; c.lineCap = 'round';
+    c.stroke();
   }
 }
 function inkLine(pts, sw = 1, col = PAL.ink, br = 'ink', curv = .5) {
-  centred(pts, (P) => { brush.noFill(); brush.noWash(); brush.noHatch(); brush.set(br, col, sw); brush.spline(P, curv); });
+  if (!pts || pts.length < 2) return;
+  const c = drawingContext;
+  c.beginPath();
+  c.moveTo(pts[0][0], pts[0][1]);
+  if (pts.length === 2) c.lineTo(pts[1][0], pts[1][1]);
+  else {
+    // 过中点的二次贝塞尔：点数少时也平滑，接近原来的 spline
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
+      c.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
+    }
+    const L = pts[pts.length - 1];
+    c.lineTo(L[0], L[1]);
+  }
+  c.strokeStyle = col;
+  c.lineWidth = Math.max(.5, sw * INK_W);
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  c.stroke();
 }
 
 // ---------- lettering (drawn on the 2D compositor, under the paper grain) ----------
@@ -241,13 +264,8 @@ function drawLetters(c) {
   }
 }
 
-// p5.brush defers washes and strokes into a mask layer; a (tiny, off-screen) watercolor fill forces it to composite
-// now, so everything painted before this call really lands under whatever p5 draws next (letters, glow).
-function flushBrush() {
-  push(); resetMatrix(); translate(-W / 2, -H / 2);
-  brush.noStroke(); brush.noHatch(); brush.noWash(); brush.fill('#000000', 1); brush.fillBleed(0); brush.fillTexture(0, 0);
-  brush.polygon([[-50, -50], [-40, -50], [-40, -40]]); brush.noFill(); pop();
-}
+// 平面版没有延迟队列，画一笔就是一笔。保留空函数，只为兼容场景里已有的调用。
+function flushBrush() {}
 // Paint the queued lettering into the scene itself, so later layers (wipes) cover it. drawWorld calls this after each
 // frame; call it yourself before a wipe or iris if the shot has lettering, or the letters will sit on top of it.
 function flushLetters() {
@@ -255,42 +273,17 @@ function flushLetters() {
   letG.clear(); drawLetters(letG.drawingContext); LETTERS = [];
   flushBrush();
   // Letters are already in screen space, so composite them with the base transform even inside camBegin().
-  push(); resetMatrix(); translate(-W / 2, -H / 2); image(letG, 0, 0); pop();
+  push(); resetMatrix(); image(letG, 0, 0); pop();
 }
 
-// ---------- paper ----------
+// ---------- seeded random (still needed for stable per-frame jitter) ----------
 function lcg(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
-function makePaper() {
-  const g = createGraphics(W, H); g.pixelDensity(1); const c = g.drawingContext, rnd = lcg(11);
-  c.fillStyle = PAL.paper; c.fillRect(0, 0, W, H);
-  for (let i = 0; i < 70; i++) { const x = rnd() * W, y = rnd() * H, r = 120 + rnd() * 380, gr = c.createRadialGradient(x, y, 0, x, y, r), a = .045 * rnd(); gr.addColorStop(0, `rgba(160,125,80,${a})`); gr.addColorStop(1, 'rgba(160,125,80,0)'); c.fillStyle = gr; c.fillRect(x - r, y - r, 2 * r, 2 * r); }
-  c.lineWidth = 1;
-  for (let i = 0; i < 1400; i++) { const x = rnd() * W, y = rnd() * H, l = 6 + rnd() * 26, a = rnd() * TAU; c.strokeStyle = `rgba(110,88,60,${.035 + rnd() * .06})`; c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + Math.cos(a + .6) * l * .5, y + Math.sin(a + .6) * l * .5, x + Math.cos(a) * l, y + Math.sin(a) * l); c.stroke(); }
-  return g;
-}
-// Static grain + vignette, multiplied over the painted frame so pigment sits "in" the paper.
-function makeGrain() {
-  const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d'), rnd = lcg(5);
-  const id = c.createImageData(W, H), d = id.data;
-  for (let i = 0; i < d.length; i += 4) { const v = 255 - (rnd() < .55 ? rnd() * rnd() * 34 : 0); d[i] = v; d[i + 1] = v - 1; d[i + 2] = v - 3; d[i + 3] = 255; }
-  c.putImageData(id, 0, 0);
-  const g = c.createRadialGradient(W / 2, H / 2, H * .45, W / 2, H / 2, H * 1.05); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(120,95,70,.35)');
-  c.fillStyle = g; c.fillRect(0, 0, W, H);
-  return cv;
-}
-
-// ---------- custom brushes ----------
-function defineBrushes() {
-  brush.add('ink', { type: 'default', weight: 5, scatter: .25, sharpness: .8, grain: 40, opacity: 235, spacing: .2, pressure: [1.15, .75], rotate: 'natural', noise: .15 });
-  brush.add('inkfine', { type: 'default', weight: 2.6, scatter: .15, sharpness: .85, grain: 40, opacity: 230, spacing: .2, pressure: [1.1, .8], rotate: 'natural', noise: .1 });
-  brush.add('dry', { type: 'default', weight: 14, scatter: 3, sharpness: .3, grain: 6, opacity: 90, spacing: .6, pressure: [1, .6], rotate: 'natural', noise: .4 });
-}
 
 // ---------- frame ----------
 async function setup() {
-  createCanvas(W, H, WEBGL); pixelDensity(1); noLoop();
-  brush.scaleBrushes(5); defineBrushes();
-  paperG = makePaper(); grainC = makeGrain(); glowTex = makeGlowTex(); letG = createGraphics(W, H); letG.pixelDensity(1);
+  // 2D 画布（不是 WEBGL）：不透明填充、抗锯齿硬边，正是纯平面要的；也比笔刷快一个数量级。
+  createCanvas(W, H); pixelDensity(1); noLoop();
+  glowTex = makeGlowTex(); letG = createGraphics(W, H); letG.pixelDensity(1);
   outC = document.getElementById('out'); outX = outC.getContext('2d');
   await Promise.all([document.fonts.load('100px "Permanent Marker"'), document.fonts.load('800 50px "Shantell Sans"'), ...(window.EXTRA_FONTS || []).map(([f, txt]) => document.fonts.load(f, txt))]);
   window.ready = true;
@@ -299,23 +292,15 @@ async function setup() {
 function draw() {
   if (!window.ready) return;
   LETTERS = []; CAM = LAST_CAM = null;
-  push(); translate(-W / 2, -H / 2);
   BOILN = Math.floor(T * BOIL); CLAWD_N = 0; boilSeed('frame'); noiseSeed(77);
-  // PROJECT.flat: 平面模式——不铺宣纸纹理，改用一块干净的中性底。
-  // 这是给"干净色块背景 + 手绘角色"这种风格用的（见 SKILL.md「改造成自己的」）。
-  if (PROJECT.flat) { background(PROJECT.flatBg ?? 250); } else { image(paperG, 0, 0); }
+  background(PROJECT.bg ?? 250);       // 一块干净底，不铺纸纹（2D 下原点已在左上角，不需要补偿平移）
   drawWorld(T);
-  pop();
 }
 function composite(t) {
   const c = outX;
   c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
   c.drawImage(drawingContext.canvas, 0, 0, W, H);
   drawLetters(c);
-  if (!PROJECT.flat) {                     // 平面模式：不叠颗粒和暗角
-    c.globalCompositeOperation = 'multiply'; c.drawImage(grainC, 0, 0);
-    c.globalCompositeOperation = 'source-over';
-  }
   if (window.overlayHook) window.overlayHook(c, t);   // optional crisp 2D overlay on top of the grain (e.g. karaoke, see src/karaoke.js)
 }
 window.renderAt = async (t, type = 'image/png', q = .92) => { T = t; await redraw(); composite(t); return outC.toDataURL(type, q); };
@@ -340,7 +325,7 @@ window.renderSheet = async (times, cols = 3, w = 640, crop = null, at = null) =>
   }
   return { url: sc.toDataURL('image/jpeg', .9), ms };
 };
-window.gpuInfo = () => { const gl = drawingContext, e = gl.getExtension('WEBGL_debug_renderer_info'); return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); };
+window.gpuInfo = () => '2d canvas (no WebGL: flat mode)';
 
 function devUI() {
   const s = document.getElementById('scrub'), lab = document.getElementById('tt');

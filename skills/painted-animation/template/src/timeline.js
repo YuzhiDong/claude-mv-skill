@@ -48,8 +48,12 @@ function drawWorld(t) {
 }
 
 function placeholder(t) {
-  paint(ellPts(960, 520, 520, 300, 30, 20), { fill: PAL.sky, fillOp: 90, bleed: .3, ink: null });
-  clawd(960, 820, 20, feel('happy', t));
+  // 新工程第一次跑起来看到的就是这个：天、地、一个角色。它只是占位，
+  // 告诉你引擎通了；把 src/scenes/ 里的文件换成你的镜头即可。
+  paint(rectPts(-80, -80, W + 160, H + 160), { wash: mixCol(PAL.sky, PAL.cream, .5), ink: null });
+  paint(rectPts(-80, 820, W + 160, 340), { wash: mixCol(PAL.sap, PAL.ink, .3), ink: null });
+  paint(ellPts(960, 780, 620, 90, 34, 3), { wash: mixCol(PAL.sap, PAL.night, .25), ink: null });
+  clawd(960, 800, 26, feel('happy', t));
 }
 
 // ---------- brush wipe ----------

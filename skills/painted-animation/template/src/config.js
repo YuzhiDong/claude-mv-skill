@@ -1,5 +1,5 @@
-// config.js: project settings.
-//   duration: the video's length in seconds.
-//   bpm:      the rhythm that bounces, dances and pulse() follow. Clawd always moves to some beat; if the video has music,
-//             set this to the song's tempo, and set offset to the time in seconds of its first downbeat.
-const PROJECT = { duration: 11, bpm: 120, offset: 0 };
+// config.js: 项目设置。
+//   duration: 影片长度（秒）
+//   bpm:      弹跳、舞蹈、pulse() 跟随的节奏。有音乐就设成歌曲的 BPM，offset 设成第一个重拍的时刻。
+//   bg:       画布底色。每个镜头通常自己铺满背景，这个只在没铺满时兜底。
+const PROJECT = { duration: 11, bpm: 120, offset: 0, bg: 250 };

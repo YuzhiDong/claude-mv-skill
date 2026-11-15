@@ -14,7 +14,6 @@
   #tt { font-variant-numeric: tabular-nums; min-width: 190px; }
 </style>
 <script src="node_modules/p5/lib/p5.min.js"></script>
-<script src="node_modules/p5.brush/dist/p5.brush.js"></script>
 </head>
 <body>
 <main>
@@ -26,6 +25,8 @@
 <script src="src/core.js"></script>
 <script src="src/clawd.js"></script>
 <script src="src/timeline.js"></script>
+<!-- 字幕：必须排在 timeline.js 之后（它要读 SHOTS / DUR） -->
+<script src="src/karaoke.js"></script>
 <!-- reference sheets (standalone loops) -->
 <script src="src/sheets.js"></script>
 <!-- your video: add a script per scene file, in order -->
