@@ -94,6 +94,11 @@ contact sheet、静帧、短 strip 这类几帧的预览，可以直接在当前
 node render.mjs --clip --out=out/video.mp4                                   # 短片，单线程
 node render.mjs --frames --workers=4 && node render.mjs --encode --out=out/video.mp4 [--audio=assets/song.mp3]   # 长片，并行 + 可续跑
 
+# 增量：只重渲改动过的镜头（比对 out/manifest.json 里的源码 mtime）
+node render.mjs --frames --dry-run              # 先看它会渲哪些，不动手
+node render.mjs --frames --only=s09,s10         # 强制只渲这两镜
+node render.mjs --frames --all                  # 忽略 manifest，全片重来
+
 # 出片之后压一版轻的用于传看（1080p 母版通常 150–190 MB，720p 约 30 MB）
 ffmpeg -y -i out/video.mp4 -vf "scale=1280:720" -c:v libx264 -preset medium -crf 21 \
        -c:a aac -b:a 160k -movflags +faststart out/mv-720p.mp4
@@ -140,6 +145,10 @@ ffmpeg -y -i out/video.mp4 -vf "scale=1280:720" -c:v libx264 -preset medium -crf
 - **6 路并发是甜点：1.07 帧/秒**。3 路 0.85 帧/秒；**10 路反而更慢**——6 个以上 page 同时初始化会互相拖死，实测 22 秒渲出 0 帧。
 - 全片 1350 帧 ≈ 28 分钟。
 - 渲染器默认 **24fps**（不是 30）。写文档、报时长之前先看 `render.mjs` 顶部。
+- **增量渲染靠镜头注册时记下的来源文件**：`shots([[t0, fn, 's09']])` 第三个参数是镜号（不写就用索引）。
+  `--frames` 会比对 `out/manifest.json` 里的源码 mtime——只有某个 `sX.js` 变了就只重渲它注册的镜头；
+  `_shared.js` / `core.js` / `clawd.js` / `config.js` / `karaoke.js` / `timeline.js` 任何一个变了就全片。
+  改完一镜先 `--dry-run` 看它打算渲哪些，别手算帧号（手算删帧是上一版踩过的坑）。
 - **局部改一镜**：删掉对应帧号，再 `--range=a:b` 重渲，最后 `--encode` 全片重编（约 1.5 分钟）。
   **删帧范围和重渲范围必须对齐**（帧号 = `round(t × fps)`），差一帧序列就断，ffmpeg 会**静默截断**成片。
   出片前一定要 `ffprobe` 核 `duration` 和帧数，不要只看那句 `wrote out/video.mp4`。

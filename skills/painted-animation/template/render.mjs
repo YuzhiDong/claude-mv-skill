@@ -17,7 +17,7 @@
 //   --chrome=<path to Chrome/Chromium>.
 import puppeteer from 'puppeteer-core';
 import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync, existsSync, statSync, renameSync, readdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, existsSync, statSync, renameSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
@@ -41,6 +41,16 @@ const times = s => String(s).split(',').map(Number);
 const span = s => String(s).split(':').map(Number);
 // comma-separated fields, keeping commas inside parentheses ('PLK.MX(1.38),PLK.WL,500,300'); numbers stay numbers
 const fields = s => { const out = []; let d = 0, cur = ''; for (const ch of String(s)) { if (ch === ',' && !d) { out.push(cur); cur = ''; continue; } d += ch === '(' ? 1 : ch === ')' ? -1 : 0; cur += ch; } out.push(cur); return out.map(v => isNaN(+v) ? v : +v); };
+
+// ---------- 增量渲染：源码 mtime 快照 ----------
+const MANIFEST = 'out/manifest.json';
+function srcMtimes() {
+  const out = {};
+  const walk = (d) => { for (const f of readdirSync(d)) { const p = d + '/' + f; const st = statSync(p); if (st.isDirectory()) walk(p); else if (/\.(js|html)$/.test(f)) out[p] = Math.round(st.mtimeMs); } };
+  if (existsSync('src')) walk('src');
+  if (existsSync('studio.html')) out['studio.html'] = Math.round(statSync('studio.html').mtimeMs);
+  return out;
+}
 
 if (args.encode) {
   const out = args.out || 'out/video.mp4', n = readdirSync(FRAMES_DIR).filter(f => f.endsWith('.jpg')).length, audio = args.audio;
@@ -115,12 +125,50 @@ if (args.sheet || args.strip) {
   console.log(`${n} frames → ${out}  (${((Date.now() - start) / n).toFixed(0)} ms/frame)`);
 } else if (args.frames) {
   // Parallel and resumable: each worker pulls the next missing frame; files are written atomically.
-  const probe = await openPage(), len = await lengthOf(probe); await probe.close();
+  // INCREMENTAL: compares source mtimes against out/manifest.json and re-renders only the shots whose
+  // file changed. --only=s03,s05 forces a set; --all forces the whole film.
+  const probe = await openPage(), len = await lengthOf(probe);
+  const plan = await probe.evaluate(() => (window.getShotPlan ? window.getShotPlan() : []));
+  await probe.close();
   const [a, b] = args.range ? span(args.range) : [0, len], workers = +(args.workers || 4);
   mkdirSync(FRAMES_DIR, { recursive: true });
   const first = Math.round(a * fps), last = Math.min(Math.ceil(len * fps) - 1, Math.round(b * fps) - 1);
-  const todo = []; for (let i = first; i <= last; i++) { const f = `${FRAMES_DIR}/f${String(i).padStart(5, '0')}.jpg`; if (!existsSync(f) || statSync(f).size < 1000) todo.push(i); }
+
+  // 每一镜的时间窗：起点已知，终点是下一镜的起点（最后一镜到片尾）
+  const bounds = plan.map((s, i) => ({ ...s, t1: i + 1 < plan.length ? plan[i + 1].t0 : len }));
+  const framesOf = (bb) => { const r = []; for (let i = Math.max(first, Math.round(bb.t0 * fps)); i <= Math.min(last, Math.round(bb.t1 * fps) - 1); i++) r.push(i); return r; };
+  const CORE = ['src/config.js', 'src/core.js', 'src/clawd.js', 'src/timeline.js', 'src/karaoke.js', 'src/scenes/_shared.js'];
+  const now = srcMtimes();
+  let wanted = null;                                    // null = 全片
+
+  if (args.only) {
+    const ids = String(args.only).split(',').map((s) => s.trim()).filter(Boolean);
+    wanted = new Set();
+    for (const bb of bounds) if (ids.includes(bb.id)) for (const i of framesOf(bb)) wanted.add(i);
+    console.log(`--only ${ids.join(',')} → ${wanted.size} 帧`);
+  } else if (!args.all) {
+    const prev = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : null;
+    if (!prev) console.log('没有 manifest（首次）→ 全片');
+    else if (CORE.some((f) => now[f] !== (prev.files || {})[f]))
+      console.log('核心文件有改动（core / clawd / timeline / config / karaoke / _shared）→ 全片');
+    else {
+      const changed = Object.keys(now).filter((f) => now[f] !== (prev.files || {})[f]);
+      if (!changed.length) { console.log('源码没有变化 → 跳过。要强制重渲请加 --all'); await browser.close(); process.exit(0); }
+      const hits = bounds.filter((bb) => changed.some((f) => f.endsWith(bb.file)));
+      if (hits.length) {
+        wanted = new Set();
+        for (const bb of hits) for (const i of framesOf(bb)) wanted.add(i);
+        console.log(`改动在 ${changed.map((f) => f.split('/').pop()).join(', ')} → 只重渲 ${hits.map((h) => h.id).join(', ')}（${wanted.size} 帧）`);
+      } else console.log('改动的文件对不上任何镜头 → 全片');
+    }
+  }
+
+  const todo = []; for (let i = first; i <= last; i++) {
+    if (wanted && !wanted.has(i)) continue;
+    const f = `${FRAMES_DIR}/f${String(i).padStart(5, '0')}.jpg`; if (!existsSync(f) || statSync(f).size < 1000) todo.push(i);
+  }
   console.log(`${todo.length} frames to render (${last - first + 1 - todo.length} already done), ${workers} workers`);
+  if (args['dry-run']) { console.log('--dry-run：只报告要渲哪些，不动手'); await browser.close(); process.exit(0); }
   let next = 0, done = 0; const start = Date.now();
   await Promise.all(Array.from({ length: workers }, async (_, w) => {
     const page = await openPage('#' + w);
@@ -134,6 +182,8 @@ if (args.sheet || args.strip) {
       }
     }
   }));
+  writeFileSync(MANIFEST, JSON.stringify({ at: new Date().toISOString(), fps, range: [first, last], files: srcMtimes(), shots: bounds }, null, 1));
+  console.log(`manifest 已更新 → ${MANIFEST}（${bounds.length} 镜）`);
 } else if (args.clip) {
   const page = await openPage(), len = await lengthOf(page);
   const [a, b] = args.range ? span(args.range) : typeof args.clip === 'string' ? span(args.clip) : [0, len];

@@ -5,7 +5,31 @@
 // a pure function of t: frames render in parallel and out of order, so nothing may carry over from one frame to the next.
 
 const SHOTS = [];
-function shots(list) { SHOTS.push(...list); SHOTS.sort((a, b) => a[0] - b[0]); }
+// 每个镜头记住它是在哪个文件里注册的——增量渲染靠这个判断"改了哪些镜"。
+// shots([[t0, fn], [t1, fn, 's03']])：第三个元素是可选的镜号，不写就用索引。
+const SHOT_SRC = new Map(), SHOT_ID = new Map();
+function callerFile() {
+  const st = new Error().stack || '';
+  for (const ln of st.split('\n').slice(1)) {
+    const m = ln.match(/([\w.\-]+\.js)(?::\d+)+/);
+    if (m && !/timeline\.js/.test(m[1])) return m[1];
+  }
+  return 'unknown';
+}
+function shots(list) {
+  const file = callerFile();
+  for (const item of list) {
+    SHOTS.push(item);
+    if (item[1]) { SHOT_SRC.set(item[1], file); if (item[2]) SHOT_ID.set(item[1], item[2]); }
+  }
+  SHOTS.sort((a, b) => a[0] - b[0]);
+}
+// render.mjs 在渲染前读这个，拿到"每一镜叫什么、从哪一秒开始、来自哪个文件"
+window.getShotPlan = () => SHOTS.map((s, i) => ({
+  id: SHOT_ID.get(s[1]) || ('shot' + String(i).padStart(2, '0')),
+  t0: s[0],
+  file: SHOT_SRC.get(s[1]) || 'unknown',
+}));
 
 // Standalone loops (model sheets, GIFs, tests), outside the main timeline: window.LOOP = LOOPS[name] swaps the whole
 // frame for that function, called with loop time. Give each a length: LOOPS.x = t => { ... }; LOOPS.x.len = 4;
