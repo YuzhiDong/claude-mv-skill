@@ -1,139 +1,119 @@
 ---
 name: painted-animation
-description: Make hand-painted watercolour-and-ink cartoon videos (MP4) with code — p5.js + p5.brush rendered frame by frame in headless Chrome, encoded with ffmpeg — starring Clawd or any character. Use when the user asks to make an animation, animated short, cartoon, music video, lyric video, animated GIF/loop or "a video of Clawd…", or mentions the PDoomVideo / ClaudeAnimationBase approach. Covers storyboarding, the engine API, music and LRC lyric sync, cloud-friendly preview review, and choosing local or cloud rendering for the final video.
+description: 用代码画手绘水彩 + 沸腾墨线的动画短片（MP4）——p5.js + p5.brush 在 headless Chrome 里逐帧绘制，ffmpeg 编码；主角默认是 Clawd，也可以换成任何角色。用户要做动画、短片、卡通、MV、歌词视频、循环 GIF，或者提到"画个 Clawd 的视频""PDoomVideo / ClaudeAnimationBase 那套方法"时使用。覆盖分镜、引擎 API、音乐与 LRC 歌词同步、适合云端审片的预览方式，以及最终渲染的本地/云端选择。
 ---
 
-# Painted animation
+# 手绘动画
 
-A method for making short cartoons entirely in code, distilled from [JohnHeibel/PDoomVideo](https://github.com/JohnHeibel/PDoomVideo) (a 156 s music video painted by Claude Opus) and its generalised kit [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase) (MIT), which is bundled here as `template/`.
+一套**完全用代码画短片**的方法。提炼自 [JohnHeibel/PDoomVideo](https://github.com/JohnHeibel/PDoomVideo)（一支 156 秒、由 Claude Opus 画完的 MV）和它的通用版本 [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase)（MIT），后者作为 `template/` 打包在这里。
 
-**How it works:** every frame is a pure function of time `t`. `studio.html` loads p5.js + p5.brush and your scene files; each shot paints the whole 1920×1080 frame with watercolour fills and boiling ink lines. `render.mjs` drives headless Chrome to render contact sheets for review, or every frame in parallel, and ffmpeg encodes the MP4 (with audio if given).
+**它怎么跑起来：** 每一帧都是时间 `t` 的纯函数。`studio.html` 加载 p5.js + p5.brush 和你的场景文件；每个镜头把整张 1920×1080 的画面用水彩 fill 和沸腾的墨线画出来。`render.mjs` 驱动 headless Chrome：既可以渲染 contact sheet 供审片，也可以并行渲染每一帧；最后由 ffmpeg 编成 MP4（给了音频就一起混进去）。
 
-## Workflow
+## 工作流
 
-### 0. Scaffold
-
-```bash
-bash ~/.claude/skills/painted-animation/scripts/new_project.sh <project-dir>        # add --keep-demo to keep the example scene hooked up
-```
-
-This copies the template, unhooks the demo scene, runs `npm install` and checks node / ffmpeg / Chrome. Then **read `<project-dir>/ANIMATION_GUIDE.md` in full** before designing anything: it holds the rules, the animation principles and the complete engine / Clawd API. Look at `docs/emotions.jpg` and `docs/views.jpg` (the model sheets) with the Read tool.
-
-For a music video or anything longer than ~20 s, also read [references/music-video.md](references/music-video.md).
-
-For every music video, complete this intake before storyboarding or scene implementation:
-
-1. Ask the user to provide both the song audio file and its `.lrc` lyric file. Do not invent, transcribe or approximate missing lyrics when an LRC is expected.
-2. Always ask for the creative direction, even if the user has already mentioned part of it. Ask it as **one natural-language question in one message**, covering the desired story and overall feeling plus any recurring visual idea or content to avoid. Do not split it into separate questions, fields, a checklist or a five-part form. Tell the user they may answer in one sentence or leave it blank. Example: "What kind of story and overall feeling should this MV have, and is there any recurring image you want included or anything you want avoided? You can leave this blank if you have no preference."
-3. Confirm the received files and summarize the creative direction inferred from the single answer. Internally extract story, emotion, atmosphere / imagery, visual motif and content to avoid; do not ask the user to answer those five categories separately. Treat a blank answer as "no preference", not as missing input, and propose an appropriate interpretation during storyboarding. If the audio or LRC file is missing, pause the music-video workflow and request it.
-4. Measure the tempo with `scripts/beat_grid.py`; lyric lines are usually faster than you'd guess. Treat the provided audio and LRC as the timing source of truth.
-
-### 0.5 Design the world before the shots
-
-**Write two tables before the storyboard**: a **scene table** (place / foreground-midground-background / camera
-move) and a **colour table** (each section's key colour and its light source). One place for the whole video reads
-as "unfinished", no matter how good the storyboard is — a real 56 s MV failed exactly this way *after* the
-storyboard had been approved, and the note back was "the scenes are monotonous, and the grey background runs
-through the whole thing". Also pick a **different composition skeleton** for each place, and keep scene shots at
-`zoom 0.74–0.92` so the setting, not the character, fills the frame.
-
-Full templates, the six composition skeletons, and the one-image self-check: [references/design-first.md](references/design-first.md).
-
-### 1. Storyboard before code
-
-Write `STORYBOARD.md` in the project (format in the guide: logline, world + palette arc, motif, the character's emotion arc, then shots with **reads** — the timed list of what the viewer must understand). Worked example: [examples/xiaozhen/](examples/xiaozhen/) (a 31 s lyric video: storyboard and full scene code).
-
-For a music video, turn the user's story and mood into a coherent visual narrative and emotional arc rather than illustrating each lyric literally. Show the storyboard to the user and let them react before building, unless they said to just go ahead.
-
-### 2. Build shot by shot
-
-- Set `duration`, `bpm`, `offset` (and `audio`) in `src/config.js`.
-- One IIFE-wrapped file per scene/chapter in `src/scenes/`, ending with `shots([[t0, fn], ...])`; add its `<script>` to `studio.html`.
-- Block key poses first, check them as stills, then add the motion between them.
-
-### 3. Render and look — every shot, several times
-
-You can't see motion by reading code. From the project dir:
+### 0. 起工程
 
 ```bash
-node render.mjs --sheet=0.1,0.8,1.6,2.4 --cols=4 --w=480 --out=out/check/a.jpg        # key frames
-node render.mjs --strip=2.1:2.6 --out=out/check/strip.jpg                             # every frame of a moment
-node render.mjs --sheet=2.3 --crop=760,420,500,400 --w=500 --out=out/check/face.jpg   # full-res detail
+bash ~/.claude/skills/painted-animation/scripts/new_project.sh <项目目录>        # 加 --keep-demo 保留示例场景
 ```
 
-Open each image with Read and actually check it against the guide's review list: event clear? character big enough? reads timed so a first-time viewer gets them? anticipation / follow-through, no snaps? feet and held props touching? transitions at every seam? no text, no 3D, no pure black/white, no muddy glows? Fix and look again. Budget: ≥ 1 sheet per shot, a strip per key motion and transition, a crop per story-carrying face.
+这一步会复制模板、摘掉示例场景、跑 `npm install`，并检查 node / ffmpeg / Chrome。然后**把 `<项目目录>/ANIMATION_GUIDE.md` 整份读完**再动手设计——里面是规则、动画原理，以及完整的引擎 / Clawd API。用 Read 工具看一眼 `docs/emotions.jpg` 和 `docs/views.jpg`（角色表情表和视角表）。
 
-Contact sheets, stills, short strips and other few-frame previews may be rendered and reviewed in the current cloud environment. Keep these preview renders deliberately small and targeted; they are for visual validation, not a substitute for rendering the whole video.
+如果是 MV，或者片子超过 20 秒左右，再读一遍 [references/music-video.md](references/music-video.md)。
 
-### 4. Render the video
+**每支 MV 在写分镜或写代码之前，先把这几件事问完：**
 
-Never start a complete render directly. After preview review is finished, tell the user that complete cloud rendering can be very slow and ask explicitly whether they want the final video rendered locally or in the cloud.
+1. 请用户同时提供歌曲音频和它的 `.lrc` 歌词文件。需要 LRC 的时候，不要编造、不要用转写、不要凭听感补词。
+2. 创意方向一定要问，哪怕用户已经说了一部分。**用一条自然语言问题、一条消息问完**，覆盖想要的故事和整体感觉，以及希望反复出现的意象或不想要的内容。不要拆成多个问题、多个字段、清单或五段式表格。告诉用户一句话作答即可，也可以留空。示例："这支 MV 你想要什么样的故事和整体感觉？有没有希望反复出现的画面，或者想避开的东西？没想法可以留空。"
+3. 确认收到的文件，并把从这句回答里推断出的创意方向复述一遍。内部自行提取故事、情绪、气氛/意象、视觉母题、要避开的内容；**不要**反过来让用户按这五类分别作答。留空视为"没有偏好"，不是漏填，在分镜阶段给出一个合适的解释即可。音频或 LRC 缺失时，暂停 MV 流程并明确索要。
+4. 用 `scripts/beat_grid.py` 实测速度。歌词行通常比听上去快。以用户给的音频和 LRC 作为时间的唯一依据。
 
-**Exception — you are already on the user's machine.** If the agent runs on the same computer as the user (the
-normal local setup), there is no local-vs-cloud choice to make. State the frame count and the estimated time, then
-render locally. Don't ask a question whose answer is already settled by where you are running. Wait for their answer; storyboard approval, preview approval, or a previous general instruction to proceed is not render authorization.
+### 0.5 先设计世界，再设计镜头
 
-- If the user chooses local rendering, cloud full rendering is prohibited. Do not start the full sequence in the cloud unless the user later explicitly changes their choice. Finish the validated project files, ask for the local operating system if unknown, and provide the exact prerequisite, `npm install`, frame-render and encode commands for that platform. Keep preview images available so the user knows what was approved.
-- If the user chooses cloud rendering, confirm the expected duration, frame count and likely cost/time, then proceed with the resumable multi-worker render.
-- If the user does not answer or gives an ambiguous answer, do not run a complete render. Ask again for an explicit local-or-cloud choice.
+**在分镜之前先写两张表**：一张**场景表**（地点 / 前景·中景·远景 / 镜头运动），一张**色彩表**（每一段的主色和它的光源）。全片只用一个地方，无论分镜多好都会读成"没做完"——一支真实的 56 秒 MV 就是在分镜通过之后栽在这里，反馈原话是"场景太多单调，缺乏多样性，还有灰蒙蒙的背景基本上贯穿了全局"。同时，每个地点要挑一个**不同的构图骨架**；场景镜头的 `zoom` 压在 `0.74–0.92`，让景物而不是角色占满画面。
+
+完整模板、六种构图骨架、一张图的自我检查：[references/design-first.md](references/design-first.md)。
+
+### 1. 先写分镜
+
+在工程里写 `STORYBOARD.md`（格式见指南：logline、世界 + 色彩弧线、母题、角色的情绪弧线，然后是每个镜头和它的 **reads**——观众必须看懂的东西，带时间）。可参考的完整例子：[examples/xiaozhen/](examples/xiaozhen/)（一支 31 秒的歌词视频，分镜和全部场景代码都在里面）。
+
+做 MV 时，要把用户的故事和情绪转成一条连贯的视觉叙事和情绪曲线，而不是逐句歌词照字面插图。把分镜拿给用户看、让他反应之后再开工，除非他说了"直接做"。
+
+### 2. 一镜一镜地搭
+
+- 在 `src/config.js` 里设 `duration`、`bpm`、`offset`（以及 `audio`）。
+- `src/scenes/` 里一个场景/章节一个文件，用 IIFE 包起来，结尾写 `shots([[t0, fn], ...])`；再到 `studio.html` 里加上它的 `<script>`。
+- **先摆关键姿势**，用静帧检查它们，再补中间的动。
+
+### 3. 渲染出来看——每个镜头，看几遍
+
+光读代码是看不见运动的。在工程目录下：
 
 ```bash
-node render.mjs --clip --out=out/video.mp4                                   # short videos, one worker
-node render.mjs --frames --workers=4 && node render.mjs --encode --out=out/video.mp4 [--audio=assets/song.mp3]   # long ones, parallel + resumable
+node render.mjs --sheet=0.1,0.8,1.6,2.4 --cols=4 --w=480 --out=out/check/a.jpg        # 关键帧
+node render.mjs --strip=2.1:2.6 --out=out/check/strip.jpg                             # 某一小段的每一帧
+node render.mjs --sheet=2.3 --crop=760,420,500,400 --w=500 --out=out/check/face.jpg   # 全分辨率细节
 ```
 
-Report the output path, length and ms/frame. Offer `open out/video.mp4`.
+用 Read 打开每一张，照着指南里的检查清单逐条过：事件清楚吗？角色够大吗？reads 的时间够第一次看的人看懂吗？有预备动作和跟随动作吗、有没有突然跳变？脚和手持道具接触上了吗？每个接缝都有转场吗？有没有出现文字、3D、纯黑纯白、发浑的光晕？改完再看一遍。**预算是：每个镜头至少一张 sheet，每个关键动作和转场一条 strip，每张承担叙事的脸一张 crop。**
 
-## The rules that matter most
+contact sheet、静帧、短 strip 这类几帧的预览，可以直接在当前环境里渲染和审看。刻意做小、做准；它们是用来验证画面的，不能代替整片渲染。
 
-These are the guide's rules condensed; the guide is authoritative.
+### 4. 出片
 
-1. **Handmade medium.** Only `paint()` / `inkLine()` (p5.brush) — never plain p5 `rect`/`ellipse`/`fill`. Flat 2D only: turns go through drawn key views (`turn()`, `spinView()`), never 3D projection. Light via `glow()` (additive), because pigment-mixing makes yellow-over-blue go green.
-2. **No text.** No captions, labels, signs or word bubbles; show it instead. Reactions are painted emotes (`!`, sweat, hearts…). The one exception is karaoke in a lyric video, and at most a few big SFX.
-3. **Something happens in every shot** — an event, cause → reaction, set-ups that pay off.
-4. **Time for the viewer.** List each shot's reads; one read at a time; fast actions, held meanings; lead the eye; the reads set the shot length. This is where generated animation fails most.
-5. **Alive.** Nothing is still (idles from `feel()`, drifting cameras, boil); faces change through `emotions()` never by swapping; the character is big (medium shot u≈20–28, close-up 40–70); everything rides the beat.
-6. **Transitions at every seam**, chosen to fit the story (brush wipe, iris / shaped iris, whip pan, match cut, cut on action, camera carry-through).
-7. **One piece.** One world, a colour arc, an emotional thread, linked scenes, an ending that rhymes with the opening.
+出片之前不要直接开整片渲染。预览审完之后，告诉用户整片云端渲染很慢，并明确问他要本地渲还是云端渲。等他回答；"分镜通过了""预览通过了"或者之前说过"继续"都不等于渲染授权。
 
-## Engine gotchas
+- 用户选本地：就不要在云端跑整片。除非他后来明确改口。把验证好的工程文件准备好，如果不清楚他的系统就问，然后给出对应平台的确切前置条件、`npm install`、逐帧渲染和编码命令。保留预览图，让他知道自己批准的是哪一版。
+- 用户选云端：先确认预计时长、帧数和大概的时间/成本，再跑可续跑的多线程渲染。
+- 用户没回答或答得含糊：不要渲。再问一次，要一个明确的本地/云端选择。
 
-- **`wash` is opaque, `fill` is translucent watercolour — and this will burn you.** A background painted only with
-  `fill` never covers the paper: it looks washed out and stays pale no matter how dark you make the hex. Lay down
-  `wash` first (`washOp: 255`), then stack `fill` on top for texture. Four rounds of rework came out of this one.
-- **Colours mix like pigment, so a yellow `fill` over a blue-grey ground turns green.** Anything that must keep
-  its own colour (an umbrella, a costume) needs `wash: col, washOp: 255` as the base; use `fill` only for shading
-  and highlights.
-- **A shape far bigger than the canvas silently loses its fill.** A 3920×2280 background rect renders as bare
-  paper. Keep background rects within ~1.5× the canvas.
-- **`paint` is deferred, but `glow` calls `flushBrush()`.** So `glow` has to be drawn *after* the paints it is
-  meant to light — otherwise the queued paints land on top of it and the light vanishes.
-- **Pure functions of `t`.** Frames render in parallel and out of order: no state across frames, no `Math.random()`, no frame-by-frame physics. `hash(i)` for stable randomness, `jit()` for boil.
-- **`boilSeed(key)`** before each separate background element/prop, or a moving thing makes everything drawn after it re-boil every frame (jitter).
-- **Don't name globals after p5's.** p5 defines `line`, `OVERLAY`, `text`, `color`, `scale`, … as globals; a top-level `function line()` fails with `Cannot redefine property` and the page never becomes ready (the renderer times out). Keep helpers inside the scene IIFE or give them distinct names.
-- **Layering in doorways, windows and screens:** draw what's inside, then paint the surrounding wall/frame back over it, so nothing wider than the opening shows outside it (the train's `inDoor` + door jambs, the TV bezel pieces).
-- A `NaN` in a point list throws `Failed to construct 'OffscreenCanvas'` — guard degenerate geometry.
-- Under camera zoom ≳ 2, huge shapes lose outlines; outline weight scales with zoom, so scale `sw` down in close-ups.
-- Cost = number of fills and strokes. Aim for ≤ ~1.5–2.5 s/frame (the log prints ms/frame). Prefer fewer, bigger shapes. On machines without a real GPU, watercolour fills are slow — consider fewer `fill` shapes, or `--soft-gl` as a last resort.
-- macOS: the renderer uses `--use-angle=metal` and finds `/Applications/Google Chrome.app` automatically; otherwise pass `--chrome=<path>`.
+**例外——你已经在用户自己的机器上。** 如果 agent 和用户跑在同一台电脑（最常见的本地工作方式），根本不存在"本地还是云端"的选择。把帧数和预计耗时说清楚，然后直接在本机渲染。不要问一个答案已经由运行位置决定的问题。
 
-## Chinese lyrics, fonts and timing
+```bash
+node render.mjs --clip --out=out/video.mp4                                   # 短片，单线程
+node render.mjs --frames --workers=4 && node render.mjs --encode --out=out/video.mp4 [--audio=assets/song.mp3]   # 长片，并行 + 可续跑
+```
 
-- **Reuse an existing lyric timing file.** A project that already has per-line or per-character timings
-  (`content/lyric-timing.json`, an LRC, an SRT) is a frozen artefact — take it, don't re-derive it. Re-running
-  vocal separation "to be safe" burns the most expensive step of the whole job for nothing.
-- **Never guess Chinese lyrics with ASR.** Whisper-family models are unreliable on sung Mandarin, and a wrong
-  character on screen is worse than no subtitle at all. Get the text from the user, an LRC, or a lyric site; get
-  the timing from the existing file.
-- **`karaoke.js` already handles CJK.** `KFONT` is `"Ma Shan Zheng", "Kaiti SC", "STKaiti", serif` — the brush font
-  comes from Google Fonts and falls back to the system Kai face, so it still renders behind a firewall. Check one
-  frame with text before committing to a full render.
-- **`beat_grid.py` prints two BPMs.** The fast pulse and the half-time one (e.g. 143.55 and 70.30). For a ballad
-  take the **smaller** number, or every idle and bounce will look frantic.
+汇报输出路径、时长和每帧耗时。可以顺手 `open out/video.mp4`。
 
-## Adapting
+## 最重要的几条规则
 
-- Clawd is the default star, not a requirement. New characters, props and emotions are drawn with the same tools (`paint`, `ribbon`, `through`, `glow`) and kept on-model across shots; new emotions go in `EMO` in `src/clawd.js`.
-- `src/karaoke.js` (template) adds word-by-word karaoke for lyric videos via the `window.overlayHook` hook in `core.js`.
-- `LOOPS.name = t => {...}; LOOPS.name.len = 4;` + `node render.mjs --loop=name --png` makes a seamless loop for GIFs (`ffmpeg -i out/loop_name/f%04d.png …`).
-- Higher reasoning effort tends to give more extravagant, detailed scenes.
+以下是指南里规则的浓缩版，以指南为准。
+
+1. **媒介是硬的：笔触、平面、沸腾。** 只用 `paint()` / `inkLine()`（p5.brush）——绝不用 p5 原生的 `rect`/`ellipse`/`fill`。纯平面 2D：转身靠画出来的关键视角（`turn()`、`spinView()`），绝不做 3D 投影。光只能用 `glow()`（叠加），因为颜料混色会让黄压蓝变绿。
+2. **不要文字。** 没有字幕、标签、招牌、对话气泡；用画面表达。角色的反应是画出来的符号（`!`、汗滴、爱心……）。唯一的例外是歌词视频里的卡拉OK，以及最多几个大的拟声字。
+3. **每个镜头里都要有事发生**——一个事件、因→果、埋下的伏笔要兑现。
+4. **给观众时间。** 把每个镜头的 reads 列出来；一次只给一个；动作要快，含义要停；先引导视线；**reads 决定镜头长度**。这是 AI 生成动画最容易翻车的地方。
+5. **活着。** 没有东西是静止的（`feel()` 的待机动作、漂移的相机、沸腾的线条）；表情变化走 `emotions()`，绝不手动切换；角色要够大（中景 u≈20–28，特写 40–70）；一切都踩在节拍上。
+6. **每个接缝都要转场**，并且挑符合故事的（笔刷擦除、圆形/异形光圈、甩镜、匹配剪辑、动作接、相机带走）。
+7. **它是一件作品。** 一个世界、一条色彩弧线、一条情绪线、场景之间互相勾连、结尾与开头押韵。
+
+## 引擎的坑
+
+- **`wash` 是不透明平涂，`fill` 是半透明水彩——这个会烧到你。** 只用 `fill` 画的背景永远盖不住纸：看起来发白，无论你把颜色调多深都没用。先用 `wash` 打底（`washOp: 255`），再用 `fill` 叠纹理。这一条让我返工了四轮。
+- **颜色按颜料混，黄色 `fill` 叠在蓝灰底上会变绿。** 任何必须保持本色的东西（伞、服装），都要用 `wash: col, washOp: 255` 打底，`fill` 只用来做暗部和高光。
+- **远大于画布的形状会静默丢掉填充。** 一个 3920×2280 的背景矩形会渲成一片白纸。背景矩形控制在画布 1.5 倍以内。
+- **`paint` 是延迟的，但 `glow` 会调用 `flushBrush()`。** 所以 `glow` 必须画在它要照亮的 paint 之后——否则排队中的 paint 会盖在光上面，光就没了。
+- **帧是 `t` 的纯函数。** 帧并行、乱序渲染：不能有跨帧状态、不能用 `Math.random()`、不能逐帧积分物理。稳定随机用 `hash(i)`，沸腾用 `jit()`。
+- **`boilSeed(key)`** 要在每个独立的背景元素/道具前调用，否则一个会动的东西会让它之后画的所有东西每帧重新抖。
+- **别用 p5 的全局名命名。** p5 把 `line`、`OVERLAY`、`text`、`color`、`scale` 等都定义成了全局；顶层写 `function line()` 会报 `Cannot redefine property`，页面永远进不了 ready（渲染器超时）。辅助函数放进场景的 IIFE 里，或者换个不撞的名字。
+- **门洞、窗、屏幕里的分层：** 先画里面的东西，再把周围的墙/框画回来盖住，这样比洞口宽的东西才不会露到外面。
+- 点表里出现 `NaN` 会抛 `Failed to construct 'OffscreenCanvas'`——退化几何要先挡掉。
+- 相机 zoom ≳ 2 时，过大的形状会丢掉描边；描边粗细是世界单位、会跟着 zoom 放大，所以特写里要把 `sw` 调小。
+- 成本 = fill 和 stroke 的数量。目标是 ≤ 1.5–2.5 秒/帧（日志会打 ms/frame）。宁可少而大的形状。没有真 GPU 的机器上水彩 fill 很慢——减少 `fill` 数量，最后手段是 `--soft-gl`。
+- macOS：渲染器会用 `--use-angle=metal`，并自动找 `/Applications/Google Chrome.app`；否则传 `--chrome=<路径>`。
+
+## 中文歌词、字体与时间轴
+
+- **有现成的时间轴就直接用。** 工程里已经有的逐行或逐字时间（`content/lyric-timing.json`、LRC、SRT）是**冻结产物**——拿来用，不要重算。用"保险起见"重跑人声分离，等于把整件事里最贵的一步白烧掉。
+- **绝不用 ASR 猜中文唱词。** whisper 系模型对中文演唱不可靠，屏幕上错一个字比不写字更糟。文字来自用户、LRC 或歌词站；时间来自已有文件。
+- **`karaoke.js` 已经处理了 CJK。** `KFONT` 是 `"Ma Shan Zheng", "Kaiti SC", "STKaiti", serif`——毛笔字体走 Google Fonts，加载不到就回落到系统楷体，所以在墙内也能渲出来。整片渲染之前，先渲一帧带字的看一眼。
+- **`beat_grid.py` 会打两个 BPM。** 快脉冲和半拍（例如 143.55 和 70.30）。抒情慢歌取**小的那个**，否则所有待机和弹跳都会显得慌。
+
+## 改造成自己的
+
+- Clawd 是默认主角，不是必须。新角色、道具、情绪都用同一套工具画（`paint`、`ribbon`、`through`、`glow`），并且在每个镜头里保持同一套型；新情绪加在 `src/clawd.js` 的 `EMO` 里。
+- `src/karaoke.js`（模板自带）通过 `core.js` 里的 `window.overlayHook` 钩子，给歌词视频做逐字卡拉OK。
+- `LOOPS.name = t => {...}; LOOPS.name.len = 4;` + `node render.mjs --loop=name --png` 可以做一个无缝循环，用来出 GIF（`ffmpeg -i out/loop_name/f%04d.png …`）。
+- 推理强度调高，场景通常会画得更铺张、更细。
