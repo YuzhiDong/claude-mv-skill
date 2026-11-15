@@ -45,6 +45,12 @@ function kf(t, keys, e = ease) {
   }
   return keys[keys.length - 1][1];
 }
+// subshot(fn, a, b)：把一段镜头切片——新镜内进度 p = lt/dur 映射到原时间域 a + p*(b-a)。
+// 原动画段被拉伸或压缩到新时长（慢动作/快进），切点由节拍定，画面函数不用重写。
+function subshot(fn, a, b) {
+  const d = b - a;
+  return (t, lt, dur) => fn(t, a + clamp(lt / Math.max(dur, 1e-6)) * d, d);
+}
 // hex color mix
 function mixCol(a, b, k) {
   const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16), c = i => Math.round(lerp((pa >> i) & 255, (pb >> i) & 255, clamp(k)));
