@@ -316,7 +316,12 @@ window.renderSheet = async (times, cols = 3, w = 640, crop = null, at = null) =>
     const t0 = performance.now(); T = times[i]; await redraw(); composite(times[i]); ms.push(Math.round(performance.now() - t0));
     const x = (i % cols) * w, y = Math.floor(i / cols) * h;
     const [cx, cy] = at ? toScreen(at[0], at[1], LAST_CAM).map((v, j) => v - (j ? ch : cw) / 2) : crop || [0, 0];
-    c.drawImage(outC, cx, cy, cw, ch, x, y, w, h); c.fillStyle = 'rgba(0,0,0,.65)'; c.fillRect(x, y, 84, 24); c.fillStyle = '#fff'; c.font = '15px sans-serif'; c.fillText(times[i].toFixed(2) + 's', x + 6, y + 17);
+    c.drawImage(outC, cx, cy, cw, ch, x, y, w, h);
+    // 时间码：字号跟着图宽走，并垫一块底，保证缩略图状态下一眼能读到时间
+    const fs2 = Math.max(12, Math.round(w * .038)), tw = Math.round(fs2 * 4.6), th = Math.round(fs2 * 1.55);
+    c.fillStyle = 'rgba(0,0,0,.62)'; c.fillRect(x, y, tw, th);
+    c.fillStyle = '#fff'; c.font = `600 ${fs2}px ui-monospace, Menlo, monospace`;
+    c.fillText(times[i].toFixed(2) + 's', x + Math.round(fs2 * .38), y + Math.round(fs2 * 1.14));
   }
   return { url: sc.toDataURL('image/jpeg', .9), ms };
 };

@@ -8,8 +8,8 @@
 //         (x,y in world px, may be page expressions like PLK.MX(1.38); w,h in screen px) through each frame's camera
 //     node render.mjs --stills=1.2,3.4 --out=out/stills                                     full-res PNGs
 //   Before rendering, look at the whole thing (nothing is written to out/frames):
-//     node render.mjs --serve                                     # open /overview.html: every Nth second, one grid
-//     node render.mjs --animatic [--step=4] --out=out/animatic.mp4 # low-fps whole film with the song
+//     node render.mjs --sheet=1,3,5,...,55 --cols=4 --w=480 --out=out/overview.jpg   # whole film in one image
+//     node render.mjs --animatic [--step=4] --out=out/animatic.mp4                   # low-fps whole film with sound
 //   Make the video:
 //     node render.mjs --clip [--range=0:4] --out=out/video.mp4                               straight to MP4 (one worker)
 //     node render.mjs --frames [--range=0:8] --workers=4                                     JPEG frames → out/frames (parallel, resumable)
@@ -24,9 +24,6 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, statSync, renameSyn
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
-import { createServer } from 'node:http';
-import { createReadStream } from 'node:fs';
-import { extname, join, normalize } from 'node:path';
 
 const args = Object.fromEntries(process.argv.slice(2).map(a => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 const CHROMES = [args.chrome, process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
@@ -39,52 +36,6 @@ function playwrightChromes() {
   return readdirSync(dir).filter(n => /^chromium-\d+$/.test(n)).sort((a, b) => b.split('-')[1] - a.split('-')[1])
     .map(n => `${dir}/${n}/chrome-linux64/chrome`);
 }
-// ---------- --serve：本地静态服务，用来在浏览器里实时看片 ----------
-// 这是"正式渲染之前"的第一个审片手段：拖时间轴看任意一帧，不产生任何帧文件。
-if (args.serve) {
-  const ROOT = resolve('.');
-  const PORT = +(args.port || 8765);
-  const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
-    '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json',
-    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml',
-    '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.mp4': 'video/mp4',
-    '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf' };
-  const srv = createServer((req, res) => {
-    let rel;
-    try { rel = decodeURIComponent(new URL(req.url, 'http://x').pathname); } catch { res.writeHead(400).end(); return; }
-    if (rel === '/') rel = '/overview.html';
-    const file = join(ROOT, normalize(rel).replace(/^(\.\.[/\\])+/, ''));
-    if (!file.startsWith(ROOT)) { res.writeHead(403).end(); return; }          // 不许跳出工程目录
-    if (!existsSync(file) || statSync(file).isDirectory()) {
-      res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }).end('not found: ' + rel); return;
-    }
-    const size = statSync(file).size, type = MIME[extname(file).toLowerCase()] || 'application/octet-stream';
-    // 音频拖动需要 Range，否则 <audio> 在 Safari 里放不出来
-    const range = req.headers.range && /bytes=(\d*)-(\d*)/.exec(req.headers.range);
-    if (range) {
-      const a = range[1] ? +range[1] : 0, b = range[2] ? +range[2] : size - 1;
-      res.writeHead(206, { 'content-type': type, 'accept-ranges': 'bytes',
-        'content-range': `bytes ${a}-${b}/${size}`, 'content-length': b - a + 1 });
-      createReadStream(file, { start: a, end: b }).pipe(res); return;
-    }
-    res.writeHead(200, { 'content-type': type, 'content-length': size, 'accept-ranges': 'bytes' });
-    createReadStream(file).pipe(res);
-  });
-  srv.on('error', (e) => {
-    if (e.code === 'EADDRINUSE') { console.error(`端口 ${PORT} 已被占用，换一个：node render.mjs --serve --port=8766`); process.exit(1); }
-    throw e;
-  });
-  srv.listen(PORT, '127.0.0.1', () => {
-    console.log(`\n审片预览已启动（只监听本机）\n`);
-    console.log(`  整片总览   http://127.0.0.1:${PORT}/overview.html`);
-    console.log(`  逐帧细看   http://127.0.0.1:${PORT}/studio.html?t=0`);
-    console.log(`  拖时间轴   http://127.0.0.1:${PORT}/studio.html  （左下角滑块）\n`);
-    console.log(`  看完想跑动效预览：node render.mjs --animatic --step=4\n`);
-    console.log(`  Ctrl+C 停止。本命令不渲染、不写任何文件。`);
-  });
-  await new Promise(() => {});                       // 常驻，直到 Ctrl+C
-}
-
 const CHROME = CHROMES.find(p => p && existsSync(p));
 if (!CHROME) { console.error('Chrome not found: pass --chrome=<path> or set CHROME_PATH'); process.exit(1); }
 const fps = +(args.fps || 24), FRAMES_DIR = 'out/frames';
