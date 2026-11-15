@@ -4,7 +4,6 @@
 //     node render.mjs --sheet=0.5,1,1.5,2 [--cols=4] [--w=480] --out=out/check/a.jpg        contact sheet of chosen times
 //     node render.mjs --strip=2.0:2.5 [--cols=6] [--w=320] --out=out/check/strip.jpg        EVERY frame in a stretch (motion)
 //     node render.mjs --sheet=2.1,2.2 --crop=760,300,400,400 --w=600 --out=out/check/face.jpg full-res crops (details)
-//     node render.mjs --sheet=1.0 --anchors --out=out/check/anchors.jpg                   draw CLAWD_ANCHORS on every character (check prop placement)
 //     node render.mjs --strip=2.0:2.5 --crop-at=960,780,500,400 --out=out/check/feet.jpg       crops that follow a WORLD point
 //         (x,y in world px, may be page expressions like PLK.MX(1.38); w,h in screen px) through each frame's camera
 //     node render.mjs --stills=1.2,3.4 --out=out/stills                                     full-res PNGs
@@ -21,7 +20,7 @@
 //   --chrome=<path to Chrome/Chromium>.
 import puppeteer from 'puppeteer-core';
 import { spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync, readFileSync, existsSync, statSync, renameSync, readdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, existsSync, statSync, renameSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { homedir } from 'node:os';
@@ -196,6 +195,16 @@ if (args.sheet || args.strip) {
   const probe = await openPage(), len = await lengthOf(probe); await probe.close();
   const out = args.out || 'out/animatic.mp4', dir = 'out/animatic';
   mkdirSync(dir, { recursive: true });
+  // 帧缓存必须跟着源码走。以前只看“帧文件在不在”，源码改了也照样全部跳过——
+  // 于是静默出一版和上一版字节相同的“新样片”，人眼以为在审新框架，其实在看旧的。
+  const sig = JSON.stringify({ fps, step, src: srcMtimes() }, null, 0);
+  const sigFile = `${dir}/.srcsig`;
+  if (!existsSync(sigFile) || readFileSync(sigFile, 'utf8') !== sig) {
+    const old = readdirSync(dir).filter(f => /^f\d+\.jpg$/.test(f));
+    for (const f of old) rmSync(`${dir}/${f}`);
+    writeFileSync(sigFile, sig);
+    console.log(`animatic: 源码已变，清掉 ${old.length} 张旧帧重渲`);
+  }
   const n = Math.ceil(len * fps / step), workers = +(args.workers || 6);
   console.log(`animatic: 每 ${step} 帧取 1 → ${n} 帧 @ ${(fps / step).toFixed(1)}fps`);
   let next = 0, done = 0; const start = Date.now();
