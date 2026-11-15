@@ -45,6 +45,7 @@ bash ~/.claude/skills/painted-animation/scripts/new_project.sh <项目目录>   
 - 在 `src/config.js` 里设 `duration`、`bpm`、`offset`（以及 `audio`）。
 - `src/scenes/` 里一个场景/章节一个文件，用 IIFE 包起来，结尾写 `shots([[t0, fn], ...])`；再到 `studio.html` 里加上它的 `<script>`。
 - **先摆关键姿势**，用静帧检查它们，再补中间的动。
+- **先只做前两镜，把画风钉死，再往后铺。** 前两镜通常要改 5–6 轮（背景底色、雨的密度、角色的对比度、相机构图都在这一步定下来），后面十几镜才能一次过。反过来做——先铺 15 镜再统一调——就是全线返工。
 
 ### 3. 渲染出来看——每个镜头，看几遍
 
@@ -75,6 +76,10 @@ contact sheet、静帧、短 strip 这类几帧的预览，可以直接在当前
 ```bash
 node render.mjs --clip --out=out/video.mp4                                   # 短片，单线程
 node render.mjs --frames --workers=4 && node render.mjs --encode --out=out/video.mp4 [--audio=assets/song.mp3]   # 长片，并行 + 可续跑
+
+# 出片之后压一版轻的用于传看（1080p 母版通常 150–190 MB，720p 约 30 MB）
+ffmpeg -y -i out/video.mp4 -vf "scale=1280:720" -c:v libx264 -preset medium -crf 21 \
+       -c:a aac -b:a 160k -movflags +faststart out/mv-720p.mp4
 ```
 
 汇报输出路径、时长和每帧耗时。可以顺手 `open out/video.mp4`。
@@ -105,6 +110,16 @@ node render.mjs --frames --workers=4 && node render.mjs --encode --out=out/video
 - 相机 zoom ≳ 2 时，过大的形状会丢掉描边；描边粗细是世界单位、会跟着 zoom 放大，所以特写里要把 `sw` 调小。
 - 成本 = fill 和 stroke 的数量。目标是 ≤ 1.5–2.5 秒/帧（日志会打 ms/frame）。宁可少而大的形状。没有真 GPU 的机器上水彩 fill 很慢——减少 `fill` 数量，最后手段是 `--soft-gl`。
 - macOS：渲染器会用 `--use-angle=metal`，并自动找 `/Applications/Google Chrome.app`；否则传 `--chrome=<路径>`。
+
+## 性能参考（M 系 Mac 实测，1350 帧 / 1920×1080 / 24fps）
+
+- 单帧 300–900 ms（预算 2500 ms）。
+- **6 路并发是甜点：1.07 帧/秒**。3 路 0.85 帧/秒；**10 路反而更慢**——6 个以上 page 同时初始化会互相拖死，实测 22 秒渲出 0 帧。
+- 全片 1350 帧 ≈ 28 分钟。
+- 渲染器默认 **24fps**（不是 30）。写文档、报时长之前先看 `render.mjs` 顶部。
+- **局部改一镜**：删掉对应帧号，再 `--range=a:b` 重渲，最后 `--encode` 全片重编（约 1.5 分钟）。
+  **删帧范围和重渲范围必须对齐**（帧号 = `round(t × fps)`），差一帧序列就断，ffmpeg 会**静默截断**成片。
+  出片前一定要 `ffprobe` 核 `duration` 和帧数，不要只看那句 `wrote out/video.mp4`。
 
 ## 中文歌词、字体与时间轴
 
