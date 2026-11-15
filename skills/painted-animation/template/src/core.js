@@ -2,6 +2,9 @@
 // Length and rhythm come from PROJECT in config.js.
 const W = 1920, H = 1080;
 const BPM = PROJECT.bpm, BEAT = 60 / BPM, OFF = PROJECT.offset || 0, BOIL = 12, DUR = PROJECT.duration;
+// 片段在原曲里的起点。karaoke 的 LY 写的是原曲绝对时间，这里减回来；合成的裁切读同一个数。
+// 只在这一处定义，别在别的地方再写一遍——两处各写一个数，就是音画会错开的唯一原因。
+const CLIP0 = PROJECT.clipStart || 0;
 const TAU = Math.PI * 2;
 const PAL = {
   paper: '#F3EBDC', ink: '#2B2233', clay: '#D97757', clayDk: '#A84D33', clayLt: '#F2A283',
@@ -297,7 +300,7 @@ async function setup() {
 }
 function draw() {
   if (!window.ready) return;
-  LETTERS = []; CAM = LAST_CAM = null;
+  LETTERS = []; CAM = LAST_CAM = null; window.__CAST_LOG = window.__CAST_LOG_ON ? [] : null;
   BOILN = Math.floor(T * BOIL); CLAWD_N = 0; boilSeed('frame'); noiseSeed(77);
   background(PROJECT.bg ?? 250);       // 一块干净底，不铺纸纹（2D 下原点已在左上角，不需要补偿平移）
   drawWorld(T);
@@ -332,6 +335,79 @@ window.renderSheet = async (times, cols = 3, w = 640, crop = null, at = null) =>
   return { url: sc.toDataURL('image/jpeg', .9), ms };
 };
 window.gpuInfo = () => '2d canvas (no WebGL: flat mode)';
+
+// 角色契约表：一个角色一行，一列一个镜头。每格都裁到同一相对尺度，所以特写里的它和全景里的它
+// 在这一样大——形状一旦漂了（方头、缺脚、少一层颜色、配件没了）就是一眼的事。
+// 它回答的问题，4b 那张全片总结图回答不了：角色在里面太小，漂移看不出来。
+//   times  每个镜头的采样时刻（render.mjs --cast 默认取镜头中点）
+//   labels 可选，列头文字（镜头号）
+window.renderCastSheet = async (times, labels = [], w = 250) => {
+  const cw = Math.round(w), ch = Math.round(w * .82), GAP = 8, NAME = 116, HEAD = 18;
+  const specOf = k => (typeof CAST !== 'undefined' && CAST[k]) || null;
+  const shots = [];
+  window.__CAST_LOG_ON = true;
+  for (let i = 0; i < times.length; i++) {
+    const t = times[i]; T = t; await redraw(); composite(t);
+    const cells = [];
+    for (const m of window.__CAST_LOG || []) {
+      const [x0, y0, x1, y1] = m.scr;
+      let sw = Math.max(80, (x1 - x0) * 1.15), sh = sw * ch / cw;
+      const need = Math.max(80, (y1 - y0) * 1.12);            // 高个子（举手跳起）也要装得下
+      if (need > sh) { sh = need; sw = sh * cw / ch; }
+      const cx = (x0 + x1) / 2 - sw / 2, cy = (y0 + y1) / 2 - sh * .52;   // 略偏上：脚底下留一点地
+      const cell = document.createElement('canvas'); cell.width = cw; cell.height = ch;
+      cell.getContext('2d').drawImage(outC, cx, cy, sw, sh, 0, 0, cw, ch);
+      cells.push({ key: m.key, view: m.view, flip: m.flip, props: m.props, cell });
+    }
+    shots.push({ t, label: labels[i] || t.toFixed(2) + 's', cells });
+  }
+  window.__CAST_LOG_ON = false;
+  const keys = [...new Set(shots.flatMap(s => s.cells.map(cl => cl.key)))];
+  if (!keys.length) return { url: '', keys, shots: shots.length };
+  const rowH = HEAD + ch + GAP, sc = document.createElement('canvas');
+  sc.width = NAME + shots.length * (cw + GAP) + GAP; sc.height = HEAD + keys.length * rowH + GAP;
+  const c = sc.getContext('2d');
+  c.fillStyle = '#171613'; c.fillRect(0, 0, sc.width, sc.height);
+  shots.forEach((s, j) => {
+    c.fillStyle = '#9a968c'; c.font = '500 11px ui-monospace, Menlo, monospace';
+    c.fillText(s.label, NAME + j * (cw + GAP) + 1, HEAD - 5);
+  });
+  keys.forEach((k, i) => {
+    const y = HEAD + i * rowH, spec = specOf(k);
+    c.fillStyle = '#EDE8DC'; c.font = '500 13px ui-sans-serif, system-ui, sans-serif'; c.fillText(k, GAP, y + ch / 2);
+    if (spec && spec.rig) {
+      c.fillStyle = '#9a968c'; c.font = '11px ui-monospace, Menlo, monospace';
+      // 部件清单（不是只有数量）：契约表要能一眼核对"它是不是长这样"。
+      // NAME 栏只有 116px，放不下就折行——往 rig 里加部件时字不会挤出去。
+      const parts = (typeof rigText === 'function' ? rigText(spec.rig) : `${spec.rig.legs} 腿 ${spec.rig.arms} 臂`).split(' · ');
+      let row = '', yy = y + ch / 2 + 16;
+      const maxW = NAME - GAP * 2;      // 按实际像素折行（中文是双宽，按字符数折会裁字）
+      for (const s of parts) {
+        const next = row ? row + ' · ' + s : s;
+        if (row && c.measureText(next).width > maxW) { c.fillText(row, GAP, yy); yy += 13; row = s; } else row = next;
+      }
+      if (row) { c.fillText(row, GAP, yy); yy += 13; }
+      const ps = Object.keys(spec.props || {});
+      c.fillStyle = '#7d7a71';
+      c.fillText(ps.length ? '配件 ' + ps.join(' ') : '无配件', GAP, yy);
+    }
+    shots.forEach((s, j) => {
+      const x = NAME + j * (cw + GAP), hit = s.cells.filter(cl => cl.key === k);
+      if (!hit.length) {   // 这一镜没有它：留空位，好数出"它从哪一镜起不见了"
+        c.fillStyle = '#242320'; c.fillRect(x, y, cw, ch);
+        c.fillStyle = '#4c4a44'; c.font = '11px ui-monospace, Menlo, monospace'; c.fillText('—', x + 6, y + 15);
+        return;
+      }
+      c.drawImage(hit[0].cell, x, y);
+      // 底部黑条：view + 这一镜实际戴的配件。多人同框时"帽在谁头上"直接看这行。
+      const pt = hit[0].props && Object.keys(hit[0].props).length ? ' ·' + Object.keys(hit[0].props).join('·') : '';
+      c.fillStyle = 'rgba(0,0,0,.62)'; c.fillRect(x, y + ch - 15, 96, 15);
+      c.fillStyle = '#fff'; c.font = '10px ui-monospace, Menlo, monospace';
+      c.fillText(`${hit[0].view}${hit[0].flip ? ' ↺' : ''}${hit.length > 1 ? ' ×' + hit.length : ''}${pt}`, x + 4, y + ch - 4);
+    });
+  });
+  return { url: sc.toDataURL('image/jpeg', .9), keys, shots: shots.length };
+};
 
 function devUI() {
   const s = document.getElementById('scrub'), lab = document.getElementById('tt');

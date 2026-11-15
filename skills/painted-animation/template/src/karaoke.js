@@ -4,7 +4,9 @@
 // LY = [[start, end, "line", opts?]]. opts.sing = seconds the line takes to sing (for the fill); opts.pun =
 // { from, to, at }: at time `at`, the characters `from` get a painted strike and `to` pops in above them (e.g. the fans'
 // 大经理 → 大锦鲤 joke); opts.hold = seconds the line stays up after it ends, lifted above the next line.
-// Times are clip times: the song's LRC time minus the clip start (see references/music-video.md). Let lines run into each other.
+// Times are **absolute song times** — copy them straight out of the LRC. The clip offset lives in
+// PROJECT.clipStart (src/config.js) and is applied in two places only: here and the audio trim in render.mjs.
+// 不再手动"减片段起点"：那个减法一旦和合成时的裁切对不上，整片音画就错开，而且没有任何地方能发现。
 const LY = [
   // [3.02, 6.02, '第一句歌词'],
   // [6.07, 9.03, 'a line that holds', { sing: 2.2, hold: 1.4, pun: { from: 'old', to: 'new', at: 8.4 } }],
@@ -13,11 +15,12 @@ const KFONT = '"Ma Shan Zheng", "Kaiti SC", "STKaiti", serif';
 window.EXTRA_FONTS = [[`64px ${KFONT}`, LY.map(l => l[2] + ((l[3] && l[3].pun && l[3].pun.to) || '')).join('')]];
 
 window.overlayHook = (c, t) => {
-  const i = LY.findIndex(l => t >= l[0] && t < l[1]);
+  const q = t + CLIP0;   // LY 存的是原曲绝对时间（直接抄 LRC），换回歌词的坐标系再查
+  const i = LY.findIndex(l => q >= l[0] && q < l[1]);
   // a line with opts.hold stays up after its time, lifted and shrunk above the next one (two-row KTV style)
-  const P = LY.find(l => l[3] && l[3].hold && t >= l[1] && t < l[1] + l[3].hold);
-  if (P) { const a = t - P[1], k = ease(a / .15); kLine(c, P, t, 1024 - 108 * k, 1 - .3 * k, 1 - ease((a - (P[3].hold - .3)) / .3), true); }
-  if (i >= 0) kLine(c, LY[i], t, 1024, 1, 1, false);
+  const P = LY.find(l => l[3] && l[3].hold && q >= l[1] && q < l[1] + l[3].hold);
+  if (P) { const a = q - P[1], k = ease(a / .15); kLine(c, P, q, 1024 - 108 * k, 1 - .3 * k, 1 - ease((a - (P[3].hold - .3)) / .3), true); }
+  if (i >= 0) kLine(c, LY[i], q, 1024, 1, 1, false);
 };
 function kLine(c, L, t, y, sc, alpha, held) {
   const [a, b, txt, opt = {}] = L;

@@ -98,6 +98,15 @@ function clawdAnchorMarks(u, sw) {
 function clawd(x, y, u, o = {}) {
   // each part boils from its own seed (see boilSeed), so a moving arm never re-boils the body, or the next character
   const id = o.boilKey ?? ++CLAWD_N, rs = part => boilSeed(`clawd ${id} ${part}`);
+  // 角色契约表的原始数据：这一帧、这个角色、画在哪、什么朝向。只读，不改变任何绘制。
+  // 每次调用都记（同框两个角色就是两条），每帧由 core.js 的 draw() 清空。关掉时零开销。
+  if (window.__CAST_LOG) {
+    const py = y + (o.dy || 0) * u, bx = 7, by0 = -9.6, by1 = .6;   // 留出帽子与举起的手臂
+    const p0 = toScreen(x - bx * u, py + by0 * u), p1 = toScreen(x + bx * u, py + by1 * u);
+    window.__CAST_LOG.push({ key: String(id), view: o.view || 'front', flip: !!o.flip, u,
+      props: (window.__CAST_PROPS_BY_KEY || {})[String(id)] || null,   // 这一刻它实际戴着的配件（cast.js 登记的）
+      scr: [Math.min(p0[0], p1[0]), Math.min(p0[1], p1[1]), Math.max(p0[0], p1[0]), Math.max(p0[1], p1[1])] });
+  }
   x += (o.dx || 0) * u;
   const V = VIEWS[o.view] || VIEWS.front;
   const dy = (o.dy || 0) * u, sq = (o.sq || 0) + (o.take || 0), sm = clamp(o.smear || 0);

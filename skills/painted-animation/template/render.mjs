@@ -9,6 +9,7 @@
 //     node render.mjs --stills=1.2,3.4 --out=out/stills                                     full-res PNGs
 //   Before rendering, look at the whole thing (nothing is written to out/frames):
 //     node render.mjs --sheet=1,3,5,...,55 --cols=4 --w=480 --out=out/overview.jpg   # whole film in one image
+//     node render.mjs --cast [--at=1,3] [--w=250] --out=out/cast.jpg                 # one row per character, one column per shot
 //     node render.mjs --animatic [--step=4] --out=out/animatic.mp4                   # low-fps whole film with sound
 //   Make the video:
 //     node render.mjs --clip [--range=0:4] --out=out/video.mp4                               straight to MP4 (one worker)
@@ -39,6 +40,12 @@ function playwrightChromes() {
 const CHROME = CHROMES.find(p => p && existsSync(p));
 if (!CHROME) { console.error('Chrome not found: pass --chrome=<path> or set CHROME_PATH'); process.exit(1); }
 const fps = +(args.fps || 24), FRAMES_DIR = 'out/frames';
+// 片段起点只有一个真相：src/config.js 的 PROJECT.clipStart。这里读它给合成用，
+// 绝不让调用方再传一个数进来——两处各写一个数，就是音画错开的唯一原因。
+const clipStart = () => {
+  try { const m = /clipStart\s*:\s*(-?[\d.]+)/.exec(readFileSync('src/config.js', 'utf8')); return m ? +m[1] : 0 }
+  catch { return 0 }
+};
 const run = (cmd, a) => new Promise((ok, bad) => { const p = spawn(cmd, a, { stdio: 'inherit' }); p.on('close', c => c ? bad(new Error(cmd + ' exited ' + c)) : ok()); });
 const times = s => String(s).split(',').map(Number);
 const span = s => String(s).split(':').map(Number);
@@ -59,7 +66,7 @@ if (args.encode) {
   const out = args.out || 'out/video.mp4', n = readdirSync(FRAMES_DIR).filter(f => f.endsWith('.jpg')).length, audio = args.audio;
   console.log(`encoding ${n} frames → ${out}${audio ? ' with ' + audio : ''}`);
   await run('ffmpeg', ['-y', '-loglevel', 'error', '-stats', '-framerate', String(fps), '-i', `${FRAMES_DIR}/f%05d.jpg`,
-    ...(audio ? ['-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
+    ...(audio ? ['-ss', String(clipStart()), '-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out]);
   console.log('wrote ' + out);
   process.exit(0);
@@ -107,6 +114,23 @@ if (args.sheet || args.strip) {
   const { url, ms } = await page.evaluate((ts, c, w, crop, at) => window.renderSheet(ts, c, w, crop, at), ts, +(args.cols || (args.strip ? 6 : 3)), +(args.w || (args.strip ? 320 : 640)), crop, at);
   writeFileSync(out, Buffer.from(url.slice(url.indexOf(',') + 1), 'base64'));
   console.log(`${out}  (${ts.length} frames)  ms/frame: ${ms.join(' ')}`);
+} else if (args.cast) {
+  // 角色契约表：一个角色一行，一列一镜，全部裁到同一相对尺度。看的是"它还是不是同一个人"——
+  // 方头、缺脚、少一层颜色、配件掉了。--at 指定时刻，默认每个镜头取中点。
+  const page = await openPage(), out = args.out || 'out/cast.jpg'; mkdirSync(dirname(out), { recursive: true });
+  const plan = await page.evaluate(() => (window.getShotPlan ? window.getShotPlan() : []));
+  const len = await lengthOf(page);
+  let ts, labels;
+  if (args.at) { ts = times(args.at); labels = ts.map(t => t.toFixed(2) + 's'); }
+  else {
+    ts = plan.map((s, i) => +(((s.t0 + (i + 1 < plan.length ? plan[i + 1].t0 : len)) / 2).toFixed(3)));
+    labels = plan.map(s => s.id);
+    if (!ts.length) { ts = [len / 2]; labels = ['mid']; }
+  }
+  const { url, keys, shots } = await page.evaluate((ts, labels, w) => window.renderCastSheet(ts, labels, w), ts, labels, +(args.w || 250));
+  if (!url) { console.error('--cast：这些时刻里没有任何角色被画出来（检查场景是否走了 cast.js 的包装）'); await browser.close(); process.exit(1); }
+  writeFileSync(out, Buffer.from(url.slice(url.indexOf(',') + 1), 'base64'));
+  console.log(`${out}  ${keys.length} 个角色 × ${shots} 镜：${keys.join(', ')}`);
 } else if (args.stills) {
   const page = await openPage(), out = args.out || 'out/stills'; mkdirSync(out, { recursive: true });
   console.log('GPU:', await page.evaluate(() => window.gpuInfo()));
@@ -220,7 +244,7 @@ if (args.sheet || args.strip) {
   }));
   const ap = await openPage(), audio = args.audio || await ap.evaluate(() => PROJECT.audio || ''); await ap.close();
   await run('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps / step), '-i', `${dir}/f%05d.jpg`,
-    ...(audio ? ['-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '128k', '-shortest'] : []),
+    ...(audio ? ['-ss', String(clipStart()), '-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '128k', '-shortest'] : []),
     '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out]);
   console.log('wrote ' + out);
 } else if (args.clip) {
@@ -229,7 +253,7 @@ if (args.sheet || args.strip) {
   const audio = args.audio || await page.evaluate(() => PROJECT.audio || '');
   const out = args.out || 'out/clip.mp4'; mkdirSync(dirname(out), { recursive: true });
   const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
-    ...(audio ? ['-ss', String(a), '-t', String(b - a), '-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
+    ...(audio ? ['-ss', String(a + clipStart()), '-t', String(b - a), '-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '192k', '-shortest'] : []),
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out],
     { stdio: ['pipe', 'inherit', 'inherit'] });
   const n = Math.round((b - a) * fps), start = Date.now();

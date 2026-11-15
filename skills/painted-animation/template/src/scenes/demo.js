@@ -1,5 +1,7 @@
 // demo.js: "The fallen star", an 11-second example that exercises the kit. It is one idea, not a template: don't
 // copy its story, staging or palette into your own video (see ANIMATION_GUIDE.md).
+//   角色一律走 cast.js 生成的包装（man / manMood），不直接调 clawd()——直接调会绕过配色、boilKey 和配件，
+//   而且没有 guard 拦着改规格。这一段也是"怎么用才对"的活样板。
 //   Shot A (0–4.4 s): Clawd dozes on a hill at night. A star falls behind the next hill. Clawd wakes, has an idea,
 //                     turns (drawn key views) and trots off after it. Brush wipe.
 //   Shot B (4.4–11 s): Clawd finds the star dim and sad in the grass, lifts it, and throws it back into the sky, where
@@ -81,10 +83,10 @@
     // Clawd: dozing → startled → the idea → a turn through the key views → a trot down the hill after it
     const u = 17, x0 = 760, walk = stroll(t, 3.05, 4.7, x0, 1520, u);
     const x = t < 3.05 ? x0 : walk.x, gy = hillY(x, ...FRONT) + 4;
-    const mood = emotions(t, [[0, 'sleepy'], [tLand + .05, 'surprised', { lookX: .8 }], [2.55, 'idea'], [3.1, 'excited']]);
+    const mood = manMood(t, [[0, 'sleepy'], [tLand + .05, 'surprised', { lookX: .8 }], [2.55, 'idea'], [3.1, 'excited']]);
     const facing = t < 2.9 ? {} : t < 3.05 ? turn(t, 2.9, 3.05, 0, .25) : { view: 'side', walk: walk.walk, dy: (mood.dy || 0) * .4 + walk.dy };
     const slope = (hillY(x + 5, ...FRONT) - hillY(x - 5, ...FRONT)) / 10;
-    clawd(x, gy, u, { ...mood, ...facing, rot: (mood.rot || 0) + Math.atan(slope) * .8 });
+    man(x, gy, u, { ...mood, ...facing, rot: (mood.rot || 0) + Math.atan(slope) * .8 });
     const eye = toScreen(x, gy - 4 * u);   // screen position of Clawd, for the iris
     camEnd();
     if (lt < .5) iris(...eye, lerp(0, 1500, easeIn(lt / .5)));   // open on Clawd
@@ -109,7 +111,7 @@
     inkLine([[-200, G - 18], [W / 2, G - 24], [W + 200, G - 16]], 1, PAL.ink, 'ink', .5);
 
     const walk = stroll(lt, 0, tStop, 300, 950, u), x = walk.x;
-    const mood = emotions(lt, [[0, 'excited'], [1.05, 'surprised', { lookX: .8, lookY: .6 }], [1.45, 'hopeful', { lookX: .6, lookY: .5 }],
+    const mood = manMood(lt, [[0, 'excited'], [1.05, 'surprised', { lookX: .8, lookY: .6 }], [1.45, 'hopeful', { lookX: .6, lookY: .5 }],
                                [tHold, 'starstruck'], [tThrow + .05, 'hopeful', { lookX: .6, lookY: -.9 }], [tLove, 'love']]);
     let pose;
     if (lt < tStop) pose = { view: 'side', walk: walk.walk, dy: walk.dy };
@@ -129,7 +131,7 @@
       cl.aL = lerp(pose.aL, mood.aL ?? .2, back); cl.aR = lerp(pose.aR, mood.aR ?? .2, back);
     }
     if (lt > tWave) cl.aL = lerp(cl.aL, 1.2 + .5 * Math.sin((lt - tWave) * 13), ease(seg(lt, tWave, tWave + .2)));   // waving goodbye, with the left arm: the hearts sit by the right one
-    clawd(x, G, u, cl);
+    man(x, G, u, cl);
 
     // the star: sad in the grass → lifted overhead, brightening → thrown home along an arc → home, twinkling back
     const head = [x, G + (cl.dy || 0) * u - 8 * u * (1 - (cl.sq || 0)) - 46];

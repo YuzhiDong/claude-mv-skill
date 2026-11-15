@@ -1,70 +1,67 @@
-# Long-form and music videos (lessons from the P(doom) video)
+# 长片与 MV（从 P(doom) 那支片子学到的东西）
 
-The P(doom) music video (156.6 s, 9 chapters, ~7,800 lines) was built by Claude Opus in Claude Code with only two instructions from the human: "use the Clawd character" and "give each lyric interesting visuals and transitions". This file captures how it was organised, so a video longer than ~20 s can be made the same way. Its storyboard is at [PDoomVideo/STORYBOARD.md](https://github.com/JohnHeibel/PDoomVideo/blob/main/STORYBOARD.md); a finished lyric video made with this skill is in [examples/xiaozhen](../examples/xiaozhen/).
+P(doom) 那支 MV（156.6 秒、9 个章节、约 7800 行代码）是 Claude Opus 在 Claude Code 里做的，人只给了两条指令："用 Clawd 这个角色"和"给每句歌词配上有意思的画面和转场"。这份文件记录它当初是怎么组织的，好让超过 20 秒左右的片子也能用同样的方式做出来。它的分镜在 [PDoomVideo/STORYBOARD.md](https://github.com/JohnHeibel/PDoomVideo/blob/main/STORYBOARD.md)；用这套技能做完的一支歌词视频在 [examples/xiaozhen](../examples/xiaozhen/)。
 
-## 1. Lock the song grid first
+**本文件是扩展层**：只写长片比短片多出来的那部分——歌曲网格、多章节代码组织、并行子代理、无词段、长片渲染。通用流程见 `SKILL.md`，设计判据见 `design-first.md`，两者这里都不重复。
 
-- **Ask for the song file and an LRC** (or the time each line starts). Never guess lyric timing from a slow "feel": pop songs are usually faster than they sound, and one line is often only 2–3 s.
-- Measure the tempo and beat phase: `python3 scripts/beat_grid.py song.mp3 --from=100 --to=200 --lrc=song.lrc` (needs numpy). It prints the BPM, a beat time, and each lyric line's beat index. Lines usually start a fraction of a beat before a bar line (pickups).
-  - P(doom): 88 BPM, beat 0.682 s. 小镇姑娘: 154 BPM (half-time 77), one line = 8 beats ≈ 3.1 s.
-  - For a ballad, set `PROJECT.bpm` to the half-time pulse so idles and bounces don't look frantic.
-- **Cut a clip on a bar line**: start one bar (or two) before the first line you use, end a bar or two after the last, and fade out:
-  `ffmpeg -ss <start> -t <len> -i song.mp3 -af "afade=t=in:d=.25,afade=t=out:st=<len-2>:d=2" -c:a aac assets/clip.m4a`.
-  Clip time = song time − start. Choose `start` so a beat lands on clip time 0, then `offset: 0`.
-- Lyric table `LY` in `src/karaoke.js`: `[start, end, "text", opts]` in clip time, lines running into each other. `opts.sing` = seconds to sing the line (drives the fill); `opts.hold` keeps a line up (lifted, two-row KTV style) after the next starts; `opts.pun = { from, to, at }` strikes `from` and pops `to` above it.
-- **Fast lines, one visual per line.** Budget every shot to its line's 8 beats; put the gag on the word it belongs to (find the word's beat), and when a gag needs more read time than the line gives, carry it into the next line (the koi keeps swimming and leaps out on the next line; the struck lyric is held above the next one) instead of slowing the song.
-- Put the audio in `assets/` and set `PROJECT = { duration, bpm, offset, audio: 'assets/clip.m4a' }`.
-- Write the beat times of each chapter at the top of its file as a comment: `const B = n => OFF + n * BEAT; // B(4) 2.94 · B(12) 8.39 …` so hits land exactly.
+## 1. 先把歌曲的网格钉死
 
-## 2. Storyboard shape for a song
+- **要歌曲文件和 LRC**（或者每行的起始时间）。不要凭"感觉"猜歌词的时间点：流行歌通常比听上去快，一行往往只有 2–3 秒。
+- 量速度和拍相位：`python3 scripts/beat_grid.py song.mp3 --from=100 --to=200 --lrc=song.lrc`（需要 numpy）。它会打出 BPM、一个拍点时间，以及每一行歌词的拍序号。歌词行通常比小节线早一点点进来（弱起）。
+  - P(doom)：88 BPM，第 0 拍在 0.682 秒。小镇姑娘：154 BPM（半拍 77），一行 = 8 拍 ≈ 3.1 秒。
+  - 抒情慢歌把 `PROJECT.bpm` 设成**半拍**那个值，否则所有的待机和弹跳都会显得慌。
+- **在小节线上切片段**：从你用的第一行之前一小节（或两小节）开始，到最后一小节之后一两次节结束，然后淡出：
+  `ffmpeg -ss <start> -t <len> -i song.mp3 -af "afade=t=in:d=.25,afade=t=out:st=<len-2>:d=2" -c:a aac assets/clip.m4a`。
+  片段内时间 = 歌曲时间 − start。挑 `start` 让某一拍正好落在片段内 0 秒上，然后设 `offset: 0`。
+- 歌词表 `LY` 写在 `src/karaoke.js` 里：`[start, end, "text", opts]`，单位是片段内时间，行与行首尾相接。`opts.sing` = 这一行唱多久（驱动填充）；`opts.hold` 让一行在下行开始之后继续挂着（抬起的两行 KTV 样式）；`opts.pun = { from, to, at }` 会在 at 时刻划掉 from、在上方弹出 to。
+- **歌词快，就一行一个画面。** 每个镜头按它那行的 8 拍做预算；把笑点放在它属于的那个词上（找出那个词的拍），当一个笑点需要的阅读时间超过这一行给的，就把它带进下一行（锦鲤继续游、在下一行才跃出来；被划掉的歌词挂在下一行上方），而不是把歌拖慢。
+- 把音频放进 `assets/`，设 `PROJECT = { duration, bpm, offset, audio: 'assets/clip.m4a' }`。
+- 在每个章节文件顶部把节拍时间写成注释：`const B = n => OFF + n * BEAT; // B(4) 2.94 · B(12) 8.39 …`，这样冲击点能落准。
 
-- **One idea for the whole video**, stated in a paragraph (P(doom): "a stage show that goes off the rails… the whole apocalypse was a play").
-- **Cast table**: each recurring character, their look and their arc (Clawd grows tiny → planet-sized → back to cute).
-- **What ties it together**: a recurring set (all choruses return to the *same stage*, escalating each time), an escalating motif (the P(doom) thermometer climbs 8→34→61→86→99.9), a palette arc, a rule for transitions.
-- **Chapters** = song sections (intro, verse, chorus, bridge…). Each gets one setting and a small palette, e.g. `The Lab · night indigo, lamp ochre, monitor teal`.
-- **Shot table per chapter**: `| Time | Lyric | Shot | Out |`. One shot per lyric line (1.4–4 s). The *Out* column names how it leaves: "camera keeps pushing in", "CHOMP: mouth closes over the camera to black", "the cube drops through the floor".
-- **Act the lyric, don't write it.** Every line is a visual gag that shows the meaning. The karaoke already carries the words, so no signs or captions that repeat them.
-- A handful of big SFX across the whole video (FOOM, BOOM, CHOMP, SLAM) is fine; not more.
-- End by rhyming with the opening (curtain opens at 0 s → curtain falls at the end).
+## 2. 一支歌的分镜形状
 
-## 3. Code layout for many chapters
+**先有故事，再谈形状。** 故事五样（logline、一人一欲、实体阻力、节拍表、首尾押韵）与双向测试见 `SKILL.md` §0.35，这里不重复；长片的差别只在节拍表要**分幕**，每幕一个 logline。
 
-- One file per chapter in `src/scenes/` (`c01_intro.js`, `c02_chorus1.js`, …), each an IIFE whose helpers stay private, ending with `shots([...])` for its shots. Add each `<script>` to `studio.html` in order.
-- Shared, stable things (characters, recurring props like the stage/thermometer, palette, lyrics) live in shared files that chapter authors don't edit. Guest characters a later chapter reuses get exported on a shared object (`CAST.basilisk = (x, y, s, t, o) => {...}`).
-- Chapter breaks get a transition (P(doom) used a brush wipe at each chapter boundary, with a different colour pair per chapter). Inside a chapter, the action carries across the cut.
-- For karaoke, include `src/karaoke.js` after `timeline.js` in `studio.html` and fill `LY`. Keep key action above y ≈ 960 while a line shows. It loads a Chinese brush font (Ma Shan Zheng) for exactly the characters in `LY` through `window.EXTRA_FONTS`.
+- **整支片子只有一个想法**，用一段话写出来（P(doom)："一台脱轨的舞台演出……整场末日其实是一出戏"）。
+- **角色表**：每个反复出现的角色，长什么样、弧线是什么（Clawd 变小 → 变成行星那么大 → 变回可爱的样子）。
+- **把它们串起来的东西**：一个反复出现的场景（每次副歌都回到**同一个舞台**，一次比一次升级）、一个不断升级的母题（P(doom) 的温度计 8→34→61→86→99.9）、一条调色弧线、一条转场规则。
+- **章节** = 歌曲的段落（前奏、主歌、副歌、桥段……）。每章给一处场景和一小套调色，例如 `实验室 · 夜晚靛蓝、台灯赭黄、显示器青`。
+- **每章的镜头表**：`| 时间 | 歌词 | 镜头 | 出点 |`。一行歌词一个镜头（1.4–4 秒）。*出点*这一列写明它怎么离开："相机继续推进"、"咬：嘴在相机前合上，然后黑屏"、"方块从地板掉了下去"。
+- **演歌词，不要写歌词。** 每一行都是一个把意思演出来的视觉笑点。卡拉OK 已经带着字了，所以不要再用招牌或字幕去重复它们。
+- 整支片子放几个大的拟声字（FOOM、BOOM、CHOMP、SLAM）是可以的；不要更多。
+- 结尾跟开头押韵（0 秒幕布拉开 → 结尾幕布落下）。
 
-## 4. Parallel subagents (optional, for long videos)
+## 3. 多章节的代码组织
 
-P(doom)'s second generation was painted by parallel subagents, one per chapter, all briefed by the same guide. Do this only if the user asks for subagents or the video is long enough to justify it; otherwise build chapters yourself in order.
+- `src/scenes/` 里一章一个文件（`c01_intro.js`、`c02_chorus1.js`……），每个都是 IIFE，辅助函数留在内部，结尾用 `shots([...])` 注册它这一章的镜头。按顺序把每个 `<script>` 加进 `studio.html`。
+- 共享的、稳定的东西（角色、反复出现的道具比如舞台和温度计、调色板、歌词）放在共享文件里，写章节的人不要改。后面章节要复用的客串角色挂在共享对象上导出（`CAST.basilisk = (x, y, s, t, o) => {...}`）。
+- 章节交界处上转场（P(doom) 每个章节边界用一次笔刷擦除，每章用的颜色对不同）；章节内部靠动作跨过切点。
+- 做卡拉OK：在 `studio.html` 里把 `src/karaoke.js` 排在 `timeline.js` 之后挂上，并填好 `LY`。有歌词在显示时，关键动作保持在 y ≈ 960 以上。它会通过 `window.EXTRA_FONTS` 为 `LY` 里出现的那些字专门加载中文字体（Ma Shan Zheng）。
 
-1. Write the storyboard, the shared files and at least one finished chapter yourself first, so there is a working reference for style and API.
-2. Write a short `CHAPTER_BRIEF.md` in the project (the orchestrator's brief to subagents). It should contain:
-   - "Read ANIMATION_GUIDE.md and STORYBOARD.md first."
-   - Only edit your own chapter file. If a shared helper is missing, write it privately inside your IIFE. If you find a bug in a shared file, report it; don't edit it.
-   - Frames are pure functions of `t` (they render in parallel, out of order): no state across frames, no `Math.random()`.
-   - The canvas conventions (1920×1080, karaoke band), the beat grid, the chapter's palette, and the size rule (the lead character ≈ 40% of frame height in dance shots).
-   - Performance budget: ≤ ~2.5 s/frame; hundreds of fills/strokes, not thousands.
-   - The review loop: render sheets and strips of every shot, first/last frames, and the seams into and out of the chapter; open them and iterate until each shot is charming, readable and lively.
-3. Spawn one subagent per chapter with that brief plus its chapter's storyboard rows and time range. Several can render at once.
-4. When they finish, render sheets across every chapter seam yourself and fix continuity (palette, character scale, screen direction, the escalating motif).
+## 4. 并行子代理（可选，用于长片）
 
-## 5. Rendering a long video
+P(doom) 的第二代版本是由并行的子代理画的，一章一个，都在同一份指南下派活。只在用户明确要求子代理、或者片子长到值得这么做时才用；否则你自己按顺序一章一章搭。
 
-Never start a complete render directly. Storyboard approval, cloud-preview approval, or a general request to continue is not render authorization. At the final-render boundary, explicitly tell the user that a complete cloud render can be very slow, ask them to choose local or cloud rendering, and wait for an unambiguous answer.
+1. 先自己写好分镜、共享文件，并至少完整做完一章，这样才有一份能跑的风格与 API 参考。
+2. 在工程里写一份简短的 `CHAPTER_BRIEF.md`（编排者给子代理的任务书）。它应该包含：
+   - "先读 ANIMATION_GUIDE.md 和 STORYBOARD.md。"
+   - 只改你自己那一章的文件。缺共享辅助函数，就在自己的 IIFE 里写一个私有的。发现共享文件有 bug，报告，不要改。
+   - **这一章在故事里是第几拍、要完成什么变化。** 全片的复述与故事在派活**之前**就跟用户对齐过了，子代理不许自己编故事，只负责把它画出来。
+   - 帧是 `t` 的纯函数（并行、乱序渲染）：不许跨帧状态，不许 `Math.random()`。
+   - 画布约定（1920×1080、卡拉OK 带的位置）、节拍网格、这一章的调色，以及尺寸规则（舞蹈镜头里主角约占画面高度的 40%）。
+   - 性能预算：≤ 约 2.5 秒/帧；填充与描边几百个，不是几千个。
+   - 审片循环：把每个镜头的 sheet 和 strip、首帧末帧、以及进出这一章的接缝都渲出来；打开看，反复改，直到每一镜都可爱、可读、有生气。
+3. 一章一个子代理，把那份任务书、加上这一章的镜头表和时间区间一起给它。可以几个同时渲。
+4. 它们做完之后，你自己把每个章节接缝渲一遍 sheet，修连续性（调色、角色比例、屏幕方向、升级中的母题）。
 
-- **Local:** cloud full rendering is prohibited unless the user later explicitly changes their choice. Do not run the full render in the cloud. Confirm the user's operating system and local Node.js, Chrome and ffmpeg prerequisites, then provide the exact install, frame-render and encode commands for that platform.
-- **Cloud:** state the video duration, total frame count and an estimated render time or cost, then wait for explicit confirmation before running the commands below.
-- **Missing or ambiguous answer:** do not render; ask again for an explicit local-or-cloud choice.
+## 5. 渲染长片
 
-Only after the user chooses cloud rendering, run:
+**授权规则（报帧数、报耗时、只认明确的"本地还是云端"）见 `SKILL.md` §4，这里不重复。** 长片只多两件事：
 
-```bash
-node render.mjs --frames --workers=4          # parallel, resumable JPEG frames into out/frames
-node render.mjs --encode --audio=assets/song.mp3 --out=out/video.mp4
-```
+- **必须提前问清本地还是云端。** 长片的渲染时间按十分钟计，用户不知道它跑在哪台机器上就开跑，是最容易白烧的一步。
+- **必须用 `--frames` 分帧续跑，不要用 `--clip` 一口气渲。** 长片中途崩一次，`--clip` 就等于全白跑；`--frames` 会跳过磁盘上已有的帧，崩了、或者只改了一章，删掉那一段的 `out/frames/f0XXXX.jpg` 再跑（或 `--range=a:b`）即可。
 
-`--frames` skips frames already on disk, so a crash or a fix to one chapter only needs `rm out/frames/f0XXXX.jpg` for that range and a re-run (or `--range=a:b`).
+本地渲染前确认 node / Chrome / ffmpeg 就绪；云端渲染前把时长、总帧数、预计耗时一起报给用户。
 
 ## 6. 无词段也要有任务，别让画面等歌词
 

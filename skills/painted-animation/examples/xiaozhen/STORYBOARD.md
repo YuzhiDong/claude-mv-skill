@@ -1,25 +1,48 @@
-# Example · 小镇姑娘 (David Tao), a 31 s lyric video
+# 示例 · 小镇姑娘（陶喆），31 秒歌词视频
 
-Made with this skill by Claude Opus 5.5 in Claude Code. The prompt was the lyrics of one verse plus three notes: read the song's context so the visuals aren't abrupt; fans joke that "大经理" (big manager) is "大锦鲤" (big lucky koi), so show that; and later, the song file and the LRC timings. The scene code is in [xz_set.js](xz_set.js) (the world, cast and props) and [xz_shots.js](xz_shots.js) (the shots). To run it, scaffold a project, copy both files into `src/scenes/`, add `src/karaoke.js` with the song's `LY` table, and put your own copy of the song in `assets/`. The song isn't included.
+用这套技能，由 Claude Opus 5.5 在 Claude Code 里做的。当时的提示只有一段主歌的歌词加三条备注：先了解一下这首歌的背景，免得画面显得突兀；歌迷开玩笑说"大经理"就是"大锦鲤"，把这个做出来；后来才给了歌曲文件和 LRC 时间。场景代码在 [xz_set.js](xz_set.js)（世界、角色和道具）和 [xz_shots.js](xz_shots.js)（镜头）里。要跑起来：先起一个工程，把这两个文件拷进 `src/scenes/`，加上带这首歌 `LY` 表的 `src/karaoke.js`，再把你自己的那份歌曲放进 `assets/`。歌本身不在仓库里。
 
 ![contact sheet](../../docs/xiaozhen-sheet.jpg)
 
-**Logline:** A year ago the small-town girl left on the train, crying at the window. Now I hear she's a "big manager" (a big lucky koi). Seeing her shine like a star and happy, I can finally stop worrying, and I take the train myself.
+**复述（SKILL 0.35 的 A 半：先说清这首歌在讲什么，每个判断指得回原文）**
 
-**Song grid:** 154 BPM (half-time 77.125), one lyric line = 8 beats ≈ 3.1 s. The clip is 146.887–177.987 s of the song: one bar before the first line, room after the last line for the ending, and a 2 s fade.
+小镇姑娘坐火车走了，车窗上有泪（「还记得一年前站在火车站」「泪」）。一年后我听说她成了"大经理"——
+歌迷的玩笑是条大锦鲤，所以"大经理"在我眼里是一条亮着的鱼。我一直在等一个"她还好吗"的答案，
+答案是"她过得好，而且不需要我"。于是我坐上同一趟车，自己走了（「我才能放心走」）。
 
-**One world:** a small-town railway station in three lights: dusk now → the sepia memory (old-film scratches) → night now. **Motif:** her flower. It's on her head, then on the koi, then on the star, so you always know it's her. **Rhyme:** she left by train at the start; I leave by the same kind of train at the end.
+**副歌那句「我只希望这所有能够让你欢喜」是全片的转折**——它把"想知道"换成了"希望"，
+愿望的主语从我变成了她。这一句不指出来，后面的"放手"就没有根据。
 
-| Clip time | Line | Shot | In |
+**提案（B 半：五样，缺一样不许进兑现表）**
+
+1. **Logline：** 一年前小镇姑娘坐火车走了，在车窗上哭。现在我听说她成了"大经理"（一条大锦鲤）。看见她像星星一样亮着、挺开心，我终于能放下心，自己坐上了火车。
+2. **一人一欲：** 我想知道她过得好不好。它只改了一次，在 21.54（「我只希望这所有能够让你欢喜」）：想留住她 → 能够放她走。
+3. **阻力（实体，不是情绪）：** 那列已经开走的车。不是"我的遗憾"——是 6.07 关上的车门，是 15.39 吞掉画面的那股烟。
+4. **节拍表:**
+
+| 拍 | 故事里发生什么 | 落在 | 秒 |
 |---|---|---|---|
-| 0–3.02 | (intro bar) | Dusk. I sit on the bench with my suitcase, staring down the empty line, and sigh. | iris from dark |
-| 3.02 | 还记得一年前站在火车站 | Sepia memory. She turns, walks to the train, and hops into the doorway; I step after her with a hand out. | sepia brush wipe |
-| 6.07 | 看着自己的悲剧演完 | The door shuts. The platform becomes a stage: a spotlight on me, a rain cloud, and the red curtain falls. | cut on action |
-| 9.08 | 透过玻璃窗看见你的泪满面 | The curtain opens on the train window (my POV): she cries and presses her paw to the glass, and the window slides away. | curtain |
-| 12.38 | 那车头依然吐着烟 | The engine puffs a cloud on every beat as it pulls out; I run, stop and wave; the smoke swallows the frame. | cut on action |
-| 15.39 | 听说现在的你成了大经理 | Night, the waiting-room TV: she's on an award stage in a tie. **On "经理" (≈17.6):** poof, she's a big golden koi (with the flower and tie), the crowd bows to it, and the lyric is struck through and becomes **锦鲤**. That line is then held above the next one for 1.4 s. | smoke clears |
-| 18.64 | 前途好比闪亮的星星 | The koi leaps out of the TV, out of the window, swims up the night sky, and **becomes a star** on "星星". | cut on action |
-| 21.54 | 我只希望这所有能够让你欢喜 | Tilt down to me. Her star smiles and winks; I clasp my hands, a little heart floats up to her, and the star glows. | camera carries through |
-| 25.01 | 我才能放心走 | The night train pulls in; I pick up my case, wave up at her star, and hop aboard; the door shuts and it pulls out. Tilt up to her star, it winks, iris. | — |
+| 1 想要 | 我拎着箱子坐在空站台，等一列不会回来的车 | 前奏 | 0 |
+| 2 被拦住 | 车门关上，她走了；站台变成舞台，幕落 | 第 1–2 行 | 3.02 |
+| 3 转折 | 她成了大经理、成了星——比我以为的过得好 | 「听说…」–「前途…」 | 15.39 |
+| 4 变了 | 我放手，自己上车 | 「我才能放心走」 | 25.01 |
 
-**Lessons it taught the skill:** get the LRC and measure the tempo before storyboarding (the first draft, timed by feel, was twice too slow); carry a gag across a line boundary instead of slowing the song; paint a doorway's jambs back over whoever stands in it; don't name globals after p5's (`line`).
+5. **押韵：** 她坐火车走 / 我坐同一趟车走。同一个动作换人换方向，结尾不加新东西。
+
+**歌曲网格：** 154 BPM（半拍 77.125），一行歌词 = 8 拍 ≈ 3.1 秒。片段取全曲的 146.887–177.987 秒：第一行之前留一小节，最后一行之后留出收尾的空间，再加 2 秒淡出。
+
+**一个世界：** 一座小镇火车站，三种光——现在的黄昏 → 棕褐的记忆（老胶片划痕）→ 现在的夜。**母题：** 她的花。先在她头上，再到锦鲤身上，再到星星上，所以观众永远认得出那是她。**押韵：** 开头她坐火车走；结尾我坐着同样的一趟车走。
+
+| 片段内时间 | 歌词 | 镜头 | 入点 |
+|---|---|---|---|
+| 0–3.02 | （前奏一小节） | 黄昏。我提着箱子坐在长椅上，望着空空的铁轨，叹了口气。 | 从黑里开圆形遮罩 |
+| 3.02 | 还记得一年前站在火车站 | 棕褐色的回忆。她转过身，走向火车，跳进车门；我跟上去，伸着一只手。 | 棕褐笔刷擦除 |
+| 6.07 | 看着自己的悲剧演完 | 车门关上。站台变成一个舞台：一束光打在我身上，一朵雨云，红幕落下。 | 切在动作上 |
+| 9.08 | 透过玻璃窗看见你的泪满面 | 幕布拉开，露出车窗（我的视角）：她哭着把爪子按在玻璃上，窗户滑走。 | 幕布 |
+| 12.38 | 那车头依然吐着烟 | 车头每一拍喷出一团云，开始驶出；我跑、停下、挥手；烟吞掉画面。 | 切在动作上 |
+| 15.39 | 听说现在的你成了大经理 | 夜，候车室的电视：她打着领带站在颁奖台上。**唱到"经理"时（≈17.6）：** 噗一下，她变成一条金色大锦鲤（带着那朵花和那条领带），众人朝它鞠躬，那句歌词被划掉，变成**锦鲤**。这一行随后在下一行上方挂了 1.4 秒。 | 烟散开 |
+| 18.64 | 前途好比闪亮的星星 | 锦鲤跃出电视、跃出窗、游上夜空，在"星星"两个字上**变成一颗星**。 | 切在动作上 |
+| 21.54 | 我只希望这所有能够让你欢喜 | 下摇到我。她那颗星笑了笑、眨了眨眼；我双手合十，一颗小小的心飘上去，星星亮起来。 | 相机带走 |
+| 25.01 | 我才能放心走 | 夜车进站；我提起箱子，朝上面那颗星挥手，跳上车；车门关上，车开走。上摇到她的星，它眨了眨眼，收圆形遮罩。 | — |
+
+**它教给这套技能的事：** 先拿到 LRC、量好速度，再写分镜（第一版凭感觉排时间，慢了整整一倍）；一个笑点要跨过歌词换行就让它跨过去，不要为了它把歌拖慢；画门洞时要把门框补画在站在门里的人身上；别用 p5 的全局名（`line`）给东西起名。上面这条 logline 其实一直就是这支片子的脊梁——只是它当时还不是一个必经步骤，直到流程改版，这五个字段才按这个顺序写下来。

@@ -1,123 +1,132 @@
-# Animating Clawd
+# 给 Clawd 做动画
 
-Read this whole file before you draw anything. It covers how to make a short, hand-painted cartoon, starring Clawd or any character you design: the rules and animation principles that make it look good, the workflow that catches mistakes, and the full reference for the character and the engine.
+开始画任何东西之前，先把这份文件整份读完。它讲的是怎么做出一个人手绘的短片——主角可以是 Clawd，也可以是你自己设计的任何角色：让它好看的规则与动画原理、能提前拦住错误的流程，以及角色和引擎的完整参考。
 
-The person prompting you decides **what** the video is about. This guide decides **how** it's made. If they ask for something the rules below forbid (a caption, a 3D spin), do what they ask.
+**拍什么**由给你下指令的人决定，**怎么拍**由这份文件决定。如果他要的东西被下面的规则禁止（一个字幕、一次 3D 旋转），那就照他说的做。
 
-**No design here is final.** Clawd, the emotions, the props and the helpers are a starting point, not a limit. Change any of them, Clawd's own design included, and add whatever new characters, props or emotions the idea needs. Paint new things with the same tools and rules, so they belong with the rest.
+**这里没有任何设计是最终稿。** Clawd、表情、道具和辅助函数都只是起点，不是边界。任何一样都可以改，Clawd 本身的设计也一样；故事需要什么新角色、新道具、新表情，就加什么。新东西用同一套工具、同一套规则去画，它才属于这个世界。
 
-Look at the model sheets first:
-- [docs/emotions.jpg](docs/emotions.jpg): all 31 emotions.
-- [docs/views.jpg](docs/views.jpg): the five key views, the motion helpers and the hats.
-
----
-
-## The three goals
-
-Every rule below serves one of three goals.
-
-- **Handmade.** It should look drawn by a person, frame by frame: flat colour blocks, ink lines that boil, no gradients, no lettering.
-- **Alive.** Something is always moving and something is always happening. Faces act instead of snapping, and characters are big enough to feel.
-- **One piece.** It's one short film, not a pile of clips. Plan it before you draw it, and link every scene to the next.
-
-Underneath all three, the viewer has to be able to follow it. Timing (rule 4) is the rule models get wrong most often.
-
-## The rules
-
-### 1. The medium is solid: flat colour blocks, 2D, boil
-
-- **Paint everything with `paint()` and `inkLine()`.** Everything is a flat colour block plus an ink outline: characters, props, walls, sky. Shading is two or three stacked tones, never a gradient. Never use plain p5 shapes (`rect`, `ellipse`, `fill()`): they bypass the boil and look like 2000s Flash.
-- **The linework boils.** `jit()` and `random()` are reseeded 12 times a second (`BOIL`), so every drawing wobbles slightly, like hand-drawn animation. That's the look; don't fight it. For anything that must stay put from frame to frame (star positions, tuft heights), use `hash(i)`. Give each separate element its own seed with `boilSeed(key)` (see Engine), or one moving thing makes everything drawn after it jitter.
-- **Everything is flat 2D. Never project 3D.** Don't rotate a box in perspective, don't use `rotateY` or WEBGL 3D and don't fake depth with math. Clawd turns through **drawn key views** (front → 3/4 → side → back 3/4 → back), exactly like a cartoon model sheet: see `turn()` and `spinView()`. Depth comes from overlap, scale and colour (farther = smaller, bluer, paler), never from a projection.
-- **Light is the one exception to flatness.** Use `glow()` for anything that shines: it adds real light on top of the blocks, which is what makes fireworks and lamps read at all.
-- **Soft palette, no pure black or white.** Use `PAL.ink` for black and `PAL.cream` or `PAL.paper` for white. Keep colours soft and harmonious, and keep Clawd clearly readable against the background.
-
-### 2. No text
-
-- **Show it, don't write it.** Models overuse text. No captions, no titles, no labels on objects, no signs, no speech bubbles with words, no words on screens, no "ZZZ" typed in a font.
-- **Clawd's reactions are painted marks, never letters**: `!`, `?`, zzz, sweat, hearts, a bulb, a rain cloud. Use the emotes (see the reference).
-- **A sign that repeats the story is the classic failure.** If Clawd holds a sign saying "I'm lost", the shot has failed. Show Clawd being lost: looking left, then right, the map upside down, a sweat drop.
-- If the prompt truly needs a word (a name, a shop sign that is the joke), use `letter()`. Paint it into the scene, keep it to one or two words and use it once.
-
-### 3. Something happens in every scene
-
-- **Every shot needs an event:** something changes between its first frame and its last. Clawd wants something, finds something, tries, fails, reacts or gets it. "Clawd stands in a meadow being cute" is not a shot.
-- **One focal action at a time.** Stage it with a clear silhouette and nothing competing for attention, so it reads at a glance.
-- **Cause, then reaction.** When something happens, Clawd reacts to it: a take, an emotion change, a turn toward it. The reaction is often the funniest part, so give it time.
-- **Pay it off.** Whatever you set up in a shot (a door, a sandwich, a strange noise) gets resolved on screen, in that shot or a later one.
-
-### 4. Timing: model the viewer
-
-Timing turns a set of drawings into a story. It's also where generated animation fails most often: everything moves at one brisk speed, events pile on top of each other, and moments are over before anyone understands them.
-
-You know what happens because you wrote the code. The viewer doesn't: they see it once, at full speed, for the first time. **For every moment, ask what the viewer needs to understand and how long that will take them, and time it for that.**
-
-- **Write the reads.** For each shot, list in order what the viewer has to understand. Each item is a *read*. Every read needs time for the eye to find it, time to understand it, and a moment to register before the next thing starts. Small, distant, fast or subtle things take longer to find and understand than big, central, obvious ones.
-- **One read at a time.** Don't start a new read while the viewer is still taking in the last one. When two things happen at once, the viewer sees only one of them. Put a cause and its reaction in sequence, not on top of each other.
-- **Fast actions, slow meanings.** A motion can be very quick if it's anticipated, but what it means needs held time. Anticipation tells the viewer where to look before the action, and the hold after it lets them understand it. Move quickly through what doesn't matter to the story, and spend time on what does. That contrast between quick and held is what gives a film rhythm; one constant speed, fast or slow, makes it flat and hard to follow.
-- **Lead the eye.** The viewer looks at whatever moves, is bright, is big or is being looked at. Before an important read, get their eye to the right place (a character looks at it, the camera moves to it, it moves or lights up first), and give the eye time to get there.
-- **Let the reads set the length.** A shot is as long as its reads need. A shot with many reads can't be short, and a shot whose reads have all landed shouldn't be padded. That includes the last shot: its final read needs time to land before the video ends.
-
-For a worked example, see how the demo times its ending, at the end of this guide.
-
-### 5. Alive
-
-- **Nothing is ever still.** Every emotion has its own idle motion (`feel()`), cameras drift or push, grass sways, stars twinkle and the linework boils. A frozen frame reads as a bug.
-- **Faces act, they never snap.** Change moods with `emotions()`. It does anticipation, a squint, a take and overshoot around every change. Never swap `eyes`/`mouth` by hand between two frames.
-- **Move like a cartoon, not a machine.** Every move follows the animation principles in the next section.
-- **Clawd is big.** In a medium shot, `u` is about 20–28 (Clawd is 10u wide, 8u tall). In a close-up it's 40–70. Tiny Clawds (u < 12) are for wide establishing shots only, and never for the whole video.
-- **Everything moves on a beat.** `PROJECT.bpm` drives every idle, bounce and dance, so the whole film shares one pulse. Put the hits on beats (`pulse()`, `beatN()`), even with no music.
-
-### 6. Transitions always
-
-- **Every seam gets a transition:** into the first shot, between every pair of shots and out of the last one. Never start on a hard frame, and never just stop.
-- **Pick a transition that belongs to the story**, and don't default to the same one every time. Some options:
-  - a brush wipe (`brushWipe`)
-  - an iris or shaped iris (`iris`, `irisShape`)
-  - a whip pan with a smear
-  - a match cut (the same shape or motion across the cut)
-  - a cut on action (cut mid-move, and finish the move in the next shot)
-  - a camera move that carries through into the next shot
-  - a fade or push from paper or black
-- A plain cut is fine only when it's on action or a deliberate smash cut.
-- **Changes inside a shot are transitions too:** emotions go through `emotions()` and turns go through `turn()`. Props arrive and leave on arcs, never popping in.
-
-### 7. One piece: a vision before any code
-
-- **Storyboard first**, in writing, before you write any scene code (the workflow below has the format). If you're working with a person, show them the storyboard and let them react before you build.
-- **One world.** Pick a palette and a setting that carries through, with a colour arc across the video (e.g. cold night → warm dawn as Clawd's mood lifts).
-- **One thread.** The story has a beginning, a middle and an end, and Clawd's emotional arc follows it. Plan the emotion keys across the whole video, not per shot.
-- **Rhyme the ending with the opening:** the same place, pose or motif, changed. It makes the film feel whole.
-- **Link scenes:** motion continues across cuts, and screen direction stays consistent (if Clawd travels right, keep travelling right). Props and characters carry over.
+先看两张设定表：
+- [docs/emotions.jpg](docs/emotions.jpg)：全部 31 种表情。
+- [docs/views.jpg](docs/views.jpg)：五个关键视角、运动辅助件和帽子。
 
 ---
 
-## Animation principles
+## 三个目标
 
-These are the classic principles of character animation, as they apply here. Most of them fix one problem: motion written as code comes out mechanical, because code moves every part at once, on the same curve, by the same amount.
+下面每一条规则都在服务这三个目标之一。
 
-- **Anticipation.** Before a big move, make a small move the opposite way: a crouch before a jump, a wind-up before a throw, a squint before a take. It tells the viewer something is coming and where to look. `jump()` and `emotions()` build it in.
-- **Squash and stretch.** Bodies squash on impact and stretch when they move fast, keeping their volume (`sq`).
-- **Slow in, slow out.** Almost nothing moves at a constant speed. Things ease out of one pose and into the next. A plain `lerp` over time looks mechanical, so run its progress through an easing (`ease`, `easeIn`, `easeOut`, `backOut`).
-- **Weight.** How something starts and stops says what it weighs. Heavy things take longer to get going and to stop, and land with little bounce. Light things snap into motion, bounce and flutter to rest.
-- **Arcs.** Living things move on arcs, not straight lines: thrown props, hops, arm swings, head turns (`arcPt`).
-- **Overlapping action and follow-through.** Don't move every part at once. The eyes lead, the body follows, and arms, hats, props and tails drag behind, overshoot and settle last. Offset each part's timing a little from the one it hangs off (`spring`, `ring` and `backOut` for the settle).
-- **Avoid twinning.** Code copies values, so both arms end up at the same angle, both eyes blink together and a crowd bounces in unison. Give one arm the action and the other something smaller, and offset timings, phases and `seed`s between characters.
-- **Exaggeration.** Push poses, takes, squash and leans further than feels natural. In a short cartoon, subtle reads as nothing. If it looks like too much on the sheet, pull it back.
-- **Strong key poses.** Each shot's storytelling poses should read as stills, with a clear silhouette and the body leaning into what it's doing, before any motion goes between them. If the key poses don't read, the motion won't fix it.
-- **Show the thought.** A character notices, thinks, then acts, and the eyes move first. The viewer understands a choice when they see it being made.
-- **Secondary action.** Small actions that support the main one (a hat bobbing, an emote popping, grass stirring) add life, but they never compete with it.
+- **像手画的。** 它应该看起来像有个人一帧一帧画出来的：扁平色块、会沸腾的墨线、没有渐变、没有文字。
+- **活的。** 总有东西在动，总有事情在发生。脸是"演"出来的，不是啪一下切过去的；角色要够大，才让人有感觉。
+- **一件作品。** 它是一支完整的短片，不是一堆素材片段。画之前先想清楚，每一场都要接得住下一场。
+
+三个目标底下还压着一条：**观众得跟得上。** 节奏（规则 4）是模型最容易做错的那一条。
+
+## 规则
+
+### 1. 媒介是硬的：扁平色块、2D、沸腾
+
+- **一切都用 `paint()` 和 `inkLine()` 画。** 画面里每一样东西都是"扁平色块 + 墨线轮廓"：角色、道具、墙、天。明暗靠两三层叠加的同色系，绝不用渐变。绝不用 p5 的原生图形（`rect`、`ellipse`、`fill()`）——它们绕过沸腾，看上去像 2000 年代的 Flash。
+- **线条会沸腾。** `jit()` 和 `random()` 每秒重新播种 12 次（`BOIL`），所以每张画都轻轻抖，像手绘动画。这就是它的样子，不要跟它较劲。凡是必须逐帧定住的东西（星星的位置、头顶的呆毛高度），用 `hash(i)`。每个独立元素用 `boilSeed(key)` 给一个自己的种子（见"引擎"一节），否则一个会动的东西会让你之后画的所有东西每帧重新抖。
+- **一切都是扁平的 2D，绝不做 3D 投影。** 不要在透视里转一个盒子，不要用 `rotateY` 或 WEBGL 3D，也不要用数学伪造纵深。Clawd 靠**画出来的关键视角**转身（正面 → 3/4 → 侧面 → 背面 3/4 → 背面），跟动画设定表一模一样：见 `turn()` 和 `spinView()`。纵深来自遮挡、比例和颜色（越远越小、越蓝、越淡），绝不来自投影。
+- **光是扁平原则唯一的例外。** 所有会发光的东西用 `glow()`：它在色块之上真的加光，烟火和灯之所以能读出来，全靠这个。
+- **调子要柔，不要纯黑纯白。** 黑用 `PAL.ink`，白用 `PAL.cream` 或 `PAL.paper`。颜色要柔和、和谐，并且保证 Clawd 在背景上清楚可读。
+
+### 2. 不要文字
+
+- **演出来，不要写出来。** 模型会过度使用文字。不要字幕、不要标题、不要在物件上贴标签、不要招牌、不要带字的对话气泡、不要在屏幕上写字、不要用字体打一个"ZZZ"。
+- **Clawd 的反应是画出来的记号，绝不是字母**：`!`、`?`、zzz、汗滴、爱心、灯泡、雨云。用 emote（见参考）。
+- **一块复述剧情的牌子是经典翻车。** 如果 Clawd 举着一块写着"我迷路了"的牌子，这个镜头就失败了。要让人看见 Clawd 迷路：先看左、再看右、地图拿倒了、一滴汗。
+- 如果提示里确实需要一个词（一个名字、一块本身就是笑点的店招），用 `letter()`。把它画进场景里，控制在两个词以内，全片只用一次。
+
+### 3. 每一场都要有事发生
+
+- **每个镜头都要有一个事件**：从第一帧到最后一帧，有什么变了。Clawd 想要一样东西、发现了什么、试一次、失败、反应、或者拿到了。"Clawd 站在草地上卖萌"不是一个镜头。
+- **一次只给一个焦点动作。** 用清楚的剪影把它摆出来，不要让别的东西抢注意力，让人一眼就读懂。
+- **先有因，再有反应。** 事情发生之后，Clawd 要对它作出反应：一个 take、一次表情变化、转向它。反应往往才是最好笑的部分，所以要给它时间。
+- **埋了就得兑现。** 你在某个镜头里立下的东西（一扇门、一个三明治、一个怪声），要在画面上被解决——在这一镜，或者在后面的某一镜。
+- **"有事发生"不等于"一直在干有用的事"。** 真人会挠一下头、看别处一眼、换个脚站、顺手拉一下衣角——这些不推进剧情，却是"活人"和"执行任务的木偶"之间唯一的区别。**有事发生是叙事层，没用动作是表演层**，两层不冲突。位置很关键：放在两条 reads 之间，**别压在 read 上**会抢；频率每 3–5 秒一次。
+
+### 4. 节奏：替观众建模
+
+节奏把一堆画变成一个故事。它也是生成式动画最常翻车的地方：所有东西都以同一种轻快的速度在动，事件一层压一层，观众还没看懂，那一刻已经过去了。
+
+你知道发生了什么，因为代码是你写的。观众不知道：他们只看一次，全速，而且是第一次看。**对每一个瞬间都问一句：观众需要看懂什么，看懂这些要多久，然后就按那个时间来。**
+
+- **把 reads 写出来。** 每一镜，按顺序列出观众必须看懂的东西。每一条就是一个 *read*。每条 read 都需要时间让眼睛找到它、时间读懂它、以及事情开始之前的一刻让它落定。小而远、快而微妙的东西，比大而居中、显而易见的东西更费时间。
+- **一次只给一条 read。** 观众还在消化上一条的时候，不要开始下一条。两件事同时发生，观众只会看见其中一件。把因和它的反应排成先后，不要叠在一起。
+- **动作要快，含义要停。** 一个动作只要有预备，就可以非常快，但它意味着什么需要被留住。预备在动作之前告诉观众往哪看，动作之后的停顿让他们读懂。对故事不重要的地方快速带过，重要的地方舍得花时间。这种"快与停"的对比才是电影的节奏；从头到尾一个速度，无论快慢，都又平又难跟。
+- **引导视线。** 观众会看会动的东西、亮的东西、大的东西、以及正在被看的东西。在一条重要的 read 之前，先把他们的眼睛引到正确的位置（角色看向它、相机移向它、它先动或先亮），并且给眼睛留出赶到的时间。
+- **让 reads 决定镜头长度。** 一个镜头该多长，由它的 reads 需要多久决定。reads 多的镜头不可能短；reads 都已经落定的镜头不该注水。最后一个镜头也一样：它最后那条 read 需要时间落地，然后片子才能结束。
+
+完整的推演范例见本指南末尾——demo 是怎么给结尾排时间的。
+
+### 5. 活着
+
+- **没有东西是静止的。** 每种情绪都有自己的待机动作（`feel()`），相机在漂移或推进，草在摇、星星在闪、线条在沸腾。一帧冻结的画面会被读成一个 bug。
+- **脸是演出来的，绝不硬切。** 换情绪用 `emotions()`。它在每次变化周围都做了预备、眯眼、take 和过冲。绝不要在两帧之间手动换 `eyes`/`mouth`。
+- **动起来像卡通，不像机器。** 每个动作都遵守下一节的动画原理。
+- **Clawd 要够大。** 中景里 `u` 约 20–28（Clawd 宽 10u、高 8u）；特写里 40–70。小小的 Clawd（u < 12）只用于远景建立镜头，绝不能用满全片。
+- **一切都踩在拍子上。** `PROJECT.bpm` 驱动每一个待机、弹跳和舞蹈，所以整支片子共享同一个脉搏。把冲击点放在拍子上（`pulse()`、`beatN()`），即使没有音乐。
+- **踩拍的是冲击帧，不是动作起点。** 真正"打在"观众身上的是加速到最快的那一帧——撞击、落地、手抬到位；它落拍。预备动作在拍前 2–3 帧（24fps 下 0.08–0.12 秒）就已经动了。拿动作起点去对拍子，整条动作会晚半拍，看着"黏"。**这跟切点是两件事**：切点踩拍、动作峰值也踩拍，两条各算各的。
+- **要藏刀，就切在动作中段。** 切点落在动作速度最快那一段（大约动作的 60–70%），眼睛锁在动作上，看不见刀口；切在动作开始或结束时，是最硬的一刀。反过来，想让人明确感到"断了"，就偏偏切在动作完成之后。
+- **世界要回应角色，不只自己动。** 他走过的地方草压下去再弹回来、撞到桌子杯子晃两下、掀帘子时那道帘子扫出一道弧。**必须延迟、必须衰减**：同时动是贴纸，延迟 1–3 帧、弹两下才停才是重量（`spring`、`ring`）。每段至少 2 处"角色动 → 别的东西跟着动"，且不在同一帧。
+
+### 6. 每个接缝都要"交代"，不是每个接缝都要转场
+
+- **每个接缝都要有交代**：进入第一个镜头、每两个镜头之间、离开最后一个镜头——观众任何时候都不该觉得"刚才是不是卡了一下"。但**交代不等于刷一道转场**：同一个场景里动作连续的切，直接硬切才是对的，刷笔刷反而会把一气呵成的动作打断。
+- **先看这一缝是什么性质，再决定用不用转场：**
+
+| 接缝 | 用什么 |
+|---|---|
+| 同一场景、动作连续（连拍、反应镜、动作中段切开） | **硬切**，不画转场 |
+| 换地点 / 跳时间 / 章节边界 | **覆盖式**：笔刷（`brushWipe`）、布落下、门关上、光扫过 |
+| 情绪断点 / 惊醒 / 闪回 | `flash()`，一两帧，别超过 4 帧 |
+| 两镜共享一个形状或动作 | **匹配剪辑 / 动作接**，不画转场，靠构图接 |
+| 一个物件反复出现 | **相机带走**：推进去盖满，从同一个物件推出来 |
+
+- **频率控制在每分钟 5–8 次。** 每个接缝都刷，节奏会被色条吃掉，观众一次也记不住。
+- 实现手段不止笔刷：`iris` / `irisShape` 的带形状遮罩、带残影的甩镜、从纸白或黑里淡入推入，都可以充当覆盖式。**`brushWipe` 必然整帧盖满，只能当幕落**——想"盖到头顶以上就停"，换成布落下、门关上这类有实体的东西。
+- 覆盖式转场由两侧镜头各借 0.3–0.45 秒拼成，所以**短镜之间一律硬切**：1.1 秒的镜头两侧各借 0.4 秒，就只剩 0.3 秒可读。
+- **镜头内部的"变化"也是交代**：情绪变化走 `emotions()`，转身走 `turn()`。道具沿弧线进场、沿弧线离场，绝不凭空冒出来。
+
+### 7. 一件作品：写代码之前先有一个视界
+
+- **先写分镜**，写在纸上或文件里，然后才写任何场景代码（格式见下面的流程）。如果你在和一个人合作，把分镜给他看，等他反应之后再动手搭。
+- **一个世界。** 选一套贯穿全片的调色和一处贯穿的场景，并让颜色有一条弧线（例如：冷夜 → 暖晨，随着 Clawd 的心情变好）。
+- **一条线。** 故事有开头、中间和结尾，Clawd 的情绪弧线跟着它走。把情绪关键帧按全片规划，而不是一镜一镜地排。
+- **结尾与开头押韵：** 同一个地方、同一个姿势、同一个母题，但已经变了。这让片子显得完整。
+- **衔接场景：** 动作跨切点延续，屏幕方向保持一致（Clawd 往右走，就一直往右走）。道具和角色要带过去。
 
 ---
 
-## Workflow
+## 动画原理
 
-### 1. Storyboard
+这些是角色动画的经典原理，按它们在这里的用法写。其中大部分都在修同一个毛病：写成代码的动作会变机械，因为代码让所有部位同时、沿同一条曲线、移动同样的量。
 
-Write `STORYBOARD.md` before any scene code:
+- **预备（anticipation）。** 大动作之前先来一个反向的小动作：跳之前下蹲，扔之前回拉，take 之前眯眼。它告诉观众有事情要来了、该往哪看。`jump()` 和 `emotions()` 已经内置了。
+- **挤压与拉伸。** 身体在撞击时压扁、在快速移动时拉长，同时保住体积（`sq`）。
+- **缓入缓出。** 几乎没有东西是匀速的。东西从一个姿势"缓"出来，再"缓"进下一个。直接对时间做 `lerp` 会很机械，所以把进度过一遍缓动（`ease`、`easeIn`、`easeOut`、`backOut`）。
+- **重量。** 一样东西怎么起步、怎么停，就交代了它有多重。重的东西起步慢、刹车慢、落下时几乎不弹；轻的东西一下就动，落地还要弹两下、飘一会儿才停。
+- **弧线。** 活的东西走弧线，不走直线：被扔出的道具、跳、摆臂、转头（`arcPt`）。
+- **重叠动作与跟随。** 不要所有部位同时动。眼睛先动，身体跟上，手臂、帽子、道具和尾巴拖在后面，过冲，最后才落定。每个部件相对它挂着的那一节都要错开一点时间（落定用 `spring`、`ring` 和 `backOut`）。
+- **别对称。** 代码会复制数值，于是两条胳膊同一个角度、两只眼睛一起眨、一群角色一起弹。让一只胳膊做主动作，另一只做点小的；角色之间错开时间、相位和 `seed`。**周期也要互质**——三个都用 `sin(t*2)` 的元素会永远同步，十几秒就被看出是个循环；取 3.1s / 4.7s / 7.3s 这种互质值，全片周期就推到几十秒外，看不出来。
+- **夸张。** 姿势、take、挤压和倾斜都要推得比"自然"更狠。短片里，克制看起来等于没有。如果在图上看着过头了，再收回来。
+- **关键姿势要立得住。** 每一镜里讲故事的姿势，要在加任何中间帧之前就能当静帧读懂：剪影清楚，身体朝它正在做的事倾过去。关键姿势读不出来，中间的运动救不了。
+- **让观众看见思考。** 角色先注意到、再想、再行动，而眼睛永远先动。观众看见一个选择被做出来的过程，才明白这个选择。
+- **次级动作。** 支撑主动作的小动作（帽子点一下、emote 弹一下、草被带动）加生命感，但绝不跟主动作抢。
+
+---
+
+## 流程
+
+### 1. 分镜
+
+在写任何场景代码之前，先写 `STORYBOARD.md`（字段按下面这个骨架，写中文也可以）：
 
 ```
 Logline: one sentence. Clawd wants ___, but ___, so ___.
+Obstacle: what's in the way — physical and drawable. "A train that already left", not "his regret".
 World: setting, a small palette, light, how the colour changes across the video.
 Motif: the thing that recurs and pays off.
 Clawd's arc: the emotion keys across the whole video.
@@ -131,343 +140,427 @@ Shots:
   [transition out: ___]
 ```
 
-The reads are the timing sheet. Give each one a start and an end, make sure each has time to be found and understood, and make sure no two important reads overlap. If a shot's reads don't fit its length, lengthen the shot or cut a read; don't squeeze them.
+reads 就是节奏表：每一条给一个起点和终点，确保每条都有被找到、被读懂的时间，确保两条重要的 read 不重叠。如果一镜的 reads 塞不进它的长度，就拉长这一镜，或者砍掉一条；不要硬挤。
 
-Check the storyboard against the rules:
-- Is there an event in every shot?
-- Does every read have time to land before the next one starts?
-- Is there a transition at every seam?
-- Is there any text anywhere?
-- Does the ending rhyme with the opening?
+对照规则检查分镜：
+- logline 里有没有"但"——有没有真的挡在路上的东西，而且是画得出来的？
+- 每个镜头里都有事件吗？
+- 每条 read 在下一件事开始之前都落定了吗？
+- 每个接缝都交代清楚了吗——该硬切的老实硬切，该覆盖的盖满？
+- 覆盖式转场每分钟没超过 8 次吗？
+- 画面里有没有出现任何文字？
+- 结尾和开头押韵吗？
 
-### 2. Build
+### 2. 搭
 
-- Set `duration` (and `bpm`) in [src/config.js](src/config.js).
-- Put your scene in a new file (e.g. `src/scenes/my_video.js`), wrapped in an IIFE, and end it with `shots([...])`. In [studio.html](studio.html), **replace** the `demo.js` script tag with yours.
-- Build and check one shot at a time, in order.
-- Within a shot, block the key poses first and check them as stills (`--sheet` at the key times). Add the motion between them once they read.
+- 在 [src/config.js](src/config.js) 里设 `duration`（以及 `bpm`）。
+- 你的场景写在新文件里（例如 `src/scenes/my_video.js`），用 IIFE 包起来，结尾写 `shots([...])`。在 [studio.html](studio.html) 里把 `demo.js` 那个 `<script>` **替换**成你自己的。
+- 一镜一镜地搭、按顺序检查。
+- 在一镜之内，先把关键姿势摆出来，用静帧检查（在关键时间点 `--sheet`）。这些姿势读得通了，再补中间的动。
 
 ```js
 // src/scenes/my_video.js
 (() => {
-  function park(t, lt, dur) {                        // t = video time, lt = time in this shot, dur = shot length
-    camBegin(960 + 20 * Math.sin(lt * .6), 540, 1 + .02 * lt);   // slow drift and push: the camera is never dead
-    paint(rectPts(-200, -200, W + 400, H + 400), { wash: PAL.sky, ink: null });           // background
-    paint(ellPts(960, 1150, 1400, 380, 40, 2), { wash: PAL.sap, ink: PAL.ink, sw: 1 });   // ground
-    const mood = emotions(lt, [[0, 'bored'], [1.2, 'surprised'], [1.7, 'excited']]);      // acted changes
-    const hop = jump(lt, 2.2, 2.7, 3);                                                    // add poses that share fields
+  function park(t, lt, dur) {                        // t = 视频时间，lt = 本镜内时间，dur = 本镜长度
+    camBegin(960 + 20 * Math.sin(lt * .6), 540, 1 + .02 * lt);   // 缓慢漂移 + 推进：相机永远是活的
+    paint(rectPts(-200, -200, W + 400, H + 400), { wash: PAL.sky, ink: null });           // 背景
+    paint(ellPts(960, 1150, 1400, 380, 40, 2), { wash: PAL.sap, ink: PAL.ink, sw: 1 });   // 地面
+    const mood = emotions(lt, [[0, 'bored'], [1.2, 'surprised'], [1.7, 'excited']]);      // 演出来的变化
+    const hop = jump(lt, 2.2, 2.7, 3);                                                    // 叠加共享字段的姿势
     clawd(960, 860, 26, { ...mood, dy: mood.dy + hop.dy, sq: mood.sq + hop.sq });
-    const at = toScreen(960, 860 - 4 * 26);          // Clawd's screen position, for the iris
+    const at = toScreen(960, 860 - 4 * 26);          // Clawd 的屏幕坐标，给圆形遮罩用
     camEnd();
-    if (lt < .45) iris(...at, lerp(0, 1500, easeIn(lt / .45)));            // transition in
-    if (lt > dur - .3) brushWipe((lt - (dur - .3)) / .6);                 // transition out (next shot finishes it)
+    if (lt < .45) iris(...at, lerp(0, 1500, easeIn(lt / .45)));            // 入镜转场
+    if (lt > dur - .3) brushWipe((lt - (dur - .3)) / .6);                 // 出镜转场（由下一镜收尾）
   }
   shots([[0, park] /*, [3.5, nextShot], ... */]);
 })();
 ```
 
-### 3. Look at it: the review loop
+### 3. 看出来：审片循环
 
-You can't see motion by reading code. Render and look at every shot, several times, at three zoom levels:
+光读代码是看不见运动的。每一个镜头都要渲出来看，看几遍，三个缩放级别：
 
 ```bash
-# contact sheet: the shape of the whole piece (every shot's first, middle and last frames)
+# contact sheet：整支片子的形状（每镜的首帧、中帧、末帧）
 node render.mjs --sheet=0.1,0.8,1.6,2.4,3.1,3.9 --cols=6 --w=320 --out=out/check/sheet.jpg
-# strip: EVERY frame of a moment (turns, takes, jumps, throws, transitions)
+# strip：某个瞬间的每一帧（转身、take、跳、扔、转场）
 node render.mjs --strip=2.1:2.6 --cols=6 --w=320 --out=out/check/strip.jpg
-# crop: full-resolution detail (faces, hands, contacts, glows); crop=x,y,w,h in frame pixels
+# crop：全分辨率细节（脸、手、接触点、光晕）；crop=x,y,w,h 是画面像素
 node render.mjs --sheet=2.3,2.4 --crop=760,420,500,400 --w=500 --out=out/check/face.jpg
-# crop-at: the same, following a WORLD point through each frame's camera (a foot or a prop on a moving shot);
-# x,y in world pixels (or an expression evaluated in the page), w,h in frame pixels
+# crop-at：同上，但跟随一个世界坐标穿过每一帧的相机（运动镜头里的脚或手上的道具）；
+# x,y 是世界像素坐标（或页面里求值的表达式），w,h 是画面像素
 node render.mjs --strip=2.1:2.6 --crop-at=960,700,500,400 --out=out/check/feet.jpg
 ```
 
-Open each image and actually look at it. Check:
+每张图都打开，真的看。查这些：
 
-- **Read:** is the event of each shot clear from its sheet alone? Is Clawd big enough, and does Clawd separate from the background?
-- **Timing.** You can't judge timing from single frames, so read it like a viewer:
-  - Render the shot as a sheet at a fixed step (every 0.1–0.15 s) and read it in order.
-  - At each frame ask: where is the viewer looking right now, and do they understand it yet?
-  - Count the frames each read gets (24 frames = 1 s). A read that flashes by in a few frames, or shares its frames with another read, will be missed.
-  - After each important moment, is there time to take it in before the next thing starts?
-- **Motion:** in strips, does every move have anticipation and follow-through? Are there any pops, jumps or snaps between frames? Do the parts move at different times, or all at once? Is anything moving at a constant speed, or mirrored left and right? Are the poses pushed far enough to read?
-- **Boil:** in a strip, each pair of frames that share a boil drawing should match except where something moves. Anything still that changes every frame needs its own `boilSeed()`.
-- **Contacts:** do feet touch the ground? Do held things touch the arm tips? Do thrown things leave from the hand?
-- **Transitions:** check the first and last 0.5 s of every shot and every seam. Does it open and close with a transition?
-- **Rules:** is there any text? Is there any 3D? Is there any dead stretch where nothing is happening?
-- **Colour:** any muddy glows (use `glow()`), pure black or pure white?
+- **读得懂吗：** 只看这张 sheet，每镜的事件清楚吗？Clawd 够大吗？Clawd 和背景分得开吗？
+- **节奏。** 单帧判断不了节奏，所以像观众一样去读：
+  - 按固定步长（每 0.1–0.15 秒）把这一镜渲成一张 sheet，按顺序读。
+  - 每一帧问一句：观众此刻在看哪里，看懂了没有？
+  - 数一数每条 read 分到多少帧（24 帧 = 1 秒）。几帧就闪过去的 read，或者跟另一条 read 抢帧的 read，一定会被漏掉。
+  - 每个重要瞬间之后，有没有留出消化的时间，再开始下一件事？
+- **运动：** 看 strip，每个动作都有预备和跟随吗？帧与帧之间有突跳、跳变、硬切吗？各部位是错开时间动，还是一起动？有没有东西在匀速动，或者左右完全镜像？姿势推得够不够，读得出来吗？
+- **沸腾：** 看 strip，共用同一张沸腾画的两帧，除了会动的部分之外应该一模一样。凡是静止却每帧都在变的东西，都需要自己的 `boilSeed()`。
+- **接触：** 脚踩着地了吗？手里拿的东西贴在手臂末端了吗？扔出去的东西是从手上离开的吗？
+- **转场：** 每一镜的首尾各 0.5 秒、每一个接缝都看。它有转场开场和收尾吗？
+- **规则：** 有没有文字？有没有 3D？有没有哪一段什么都没发生？
+- **颜色：** 有没有发浑的光晕（用 `glow()`）、纯黑或纯白？
 
-Fix what you find, then look again. **Budget:** at least one sheet per shot, a strip for every key motion and transition, and a crop for every face that carries the story. Contact sheets run about 0.1–1 s per frame, so this is cheap: don't skip it.
+改掉你看到的，然后再看一遍。**预算是：**每镜至少一张 sheet，每个关键动作和转场一条 strip，每张承担叙事的脸一张 crop。contact sheet 通常每帧 0.1–1 秒，很便宜：不要省。
 
-### 4. Render
+### 4. 出片
 
 ```bash
-node render.mjs --clip --out=out/video.mp4                      # the whole video, straight to MP4
-node render.mjs --frames --workers=4                            # or: parallel + resumable JPEG frames into out/frames …
-node render.mjs --encode --out=out/video.mp4                    # … then encode them
+node render.mjs --clip --out=out/video.mp4                      # 整片直接出 MP4
+node render.mjs --frames --workers=4                            # 或者：并行、可续跑的 JPEG 帧，写进 out/frames …
+node render.mjs --encode --out=out/video.mp4                    # … 再把这些帧编码
 ```
 
 ---
 
-## Engine
+## 引擎
 
-### Files
+### 文件
 
-| file | what's in it |
+| 文件 | 里面有什么 |
 |---|---|
 | `src/config.js` | `PROJECT = { duration, bpm, offset, audio? }` |
-| `src/core.js` | canvas, palette, timing and motion helpers, `paint()`, camera, full-frame effects, `glow()`, lettering, paper, render hooks |
-| `src/clawd.js` | Clawd: views, emotions, eyes, mouths, hats, emotes, moves |
-| `src/timeline.js` | `shots()`, `LOOPS`, `brushWipe()` |
-| `src/sheets.js` | the model sheets as loops (`?loop=emotions`, `?loop=views`) |
-| `src/scenes/demo.js` | an 11-second example. **Don't copy it** (see the end of this guide) |
-| `studio.html` | open it in Chrome to scrub the video (`?t=2.5` jumps to a time, `?loop=emotions` shows a loop) |
-| `render.mjs` | headless renderer: sheets, strips, crops, stills, PNG loops, MP4 |
+| `src/core.js` | 画布、调色板、时间与运动辅助、`paint()`、相机、全屏效果、`glow()`、文字、纸张、渲染钩子 |
+| `src/clawd.js` | Clawd：视角、表情、眼睛、嘴、帽子、emote、动作 |
+| `src/timeline.js` | `shots()`、`LOOPS`、`brushWipe()` |
+| `src/sheets.js` | 设定表（以 loop 形式：`?loop=emotions`、`?loop=views`） |
+| `src/scenes/demo.js` | 一个 11 秒的示例。**不要抄它**（见本指南末尾） |
+| `studio.html` | 用 Chrome 打开来拖时间轴（`?t=2.5` 跳到某一时刻，`?loop=emotions` 看一个 loop） |
+| `render.mjs` | headless 渲染器：sheet、strip、crop、静帧、PNG loop、MP4 |
 
-### Frames are pure functions of time
+### 帧是时间的纯函数
 
-- **Frames render in parallel and out of order.** A shot is `fn(t, lt, dur)` and must draw the same frame for the same `t`, every time. No state carried between frames, no counters, no `Math.random()`, no physics that integrates frame by frame. Compute everything from `t`, in closed form (the helpers below do this for you).
-- Randomness: `hash(i)` for stable per-object values, and `jit(a)`/`random()` for boil (they change 12 times a second).
-- **Seed each element with `boilSeed(key)`.** Each boil drawing holds for two frames, so anything that isn't moving must draw the same in both. But a moving thing uses a different amount of randomness each frame, which shifts the stream for everything drawn after it, and all of that re-boils every frame and looks jittery.
-  - `boilSeed(key)` restarts the stream from the boil frame and a key that stays the same every frame (any string or number, unique within the frame).
-  - Call it before each separate element: each background layer, prop and effect.
-  - `clawd()` seeds itself and each of its parts, then reseeds when it's done, so nothing drawn after it depends on its pose. Its key is its call order; set `boilKey` if characters come and go mid-shot.
-- **Each shot paints the whole frame,** background included. The paper texture is under everything and the grain is multiplied over the top, so leaving paper showing is a valid look.
-- **Canvas:** 1920×1080, origin top-left, y down.
-- `LOOPS.name = t => {...}; LOOPS.name.len = 4;` makes a standalone loop (tests, GIFs, sheets), rendered with `--loop=name`.
+- **帧是并行、乱序渲染的。** 一镜就是 `fn(t, lt, dur)`，同一个 `t` 必须每次都画出同一帧。不许跨帧保存状态，不许计数器，不许 `Math.random()`，不许逐帧积分的物理。一切都从 `t` 用解析式算出来（下面的辅助函数已经替你做好了）。
+- 随机：每个物件要稳定的值用 `hash(i)`；沸腾用 `jit(a)` / `random()`（每秒变 12 次）。
+- **每个元素都用 `boilSeed(key)` 播种。** 每张沸腾画要撑两帧，所以不动的东西在这两帧里必须画得一样。但会动的东西每帧用掉的随机数不一样，它之后的整条随机流就被推走了，于是它之后画的一切每帧重新沸腾，看起来"沙沙"响。
+  - `boilSeed(key)` 把随机流重置到沸腾帧，加一个每帧都一样的 key（任意字符串或数字，在这一帧内唯一）。
+  - 每个独立元素之前都调用一次：每一层背景、每个道具、每个效果。
+  - `clawd()` 会给自己和每个部件播种，画完再重置回去，所以它之后画的东西不受它姿势影响。它的 key 是调用顺序；如果角色在镜头中间进出画，要显式设 `boilKey`。
+- **每一镜都要画满整帧**，包括背景。纸张纹路在最底层，颗粒在最上层乘上去，所以留出纸面也是一种成立的画面。
+- **画布：** 1920×1080，原点在左上角，y 轴向下。
+- `LOOPS.name = t => {...}; LOOPS.name.len = 4;` 做一个独立 loop（测试、GIF、设定表），用 `--loop=name` 渲染。
 
-### Painting
+### 绘制
 
-`paint(pts, o)` fills one polygon from a point list `[[x, y], ...]`.
+`paint(pts, o)` 用一个点列 `[[x, y], ...]` 填充一个多边形。
 
-| option | meaning |
+| 选项 | 含义 |
 |---|---|
-| `wash, washOp` | **the colour itself.** One shape, one colour. 255 = opaque; lower values let what is behind show through. |
-| `fill, fillOp` | the second layer: shading and highlights. A shape with **only** `fill` and no `wash` (reflections, puddles, glows) degrades to a translucent colour block. |
-| `ink, sw` | outline colour (default `PAL.ink`) and weight. **`ink: null` means no outline.** |
-| `curv` | accepted but inert: the flat engine connects points with straight segments. |
+| `wash, washOp` | **颜色本身。** 一个形状一种颜色。255 = 不透明；数值越低，后面的东西越透出来。 |
+| `fill, fillOp` | 第二层：暗部与高光。**只有** `fill` 没有 `wash` 的形状（反光、水洼、光斑）会降级成半透明色块。 |
+| `ink, sw` | 轮廓颜色（默认 `PAL.ink`）与线宽。**`ink: null` 表示不要轮廓。** |
+| `curv` | 能传，但不起作用：扁平引擎用直线段连点。 |
 
-`bleed`, `tex`, `border`, `hatch` and `br` still parse, but do nothing. There is no pigment mixing, no edge
-pooling and no paper: a colour is exactly the hex you gave it.
+`bleed`、`tex`、`border`、`hatch` 和 `br` 仍然能被解析，但什么都不做。没有颜料混色、没有边缘积色、没有纸：你给什么十六进制，它就是什么颜色。
 
-- **Lines:** `inkLine(pts, sw, colour, brush, curvature)`. `sw` becomes pixels as `sw * INK_W` (3.2), so `sw: 1`
-  is about 3 px at 1080p. Long-shot outlines want 1-2; close-ups want 0.3-0.6 or the line eats the frame.
-- **Shapes:** `rectPts(x, y, w, h, jitter)`, `ellPts(cx, cy, rx, ry, n, jitter, rot)`,
-  `rrPts(x, y, w, h, r, jitter)`, `starPts`, `heartPts`, `through(P)`, `ribbon(P, w0, w1)`.
-- **One shape, one outline.** Build a creature from as few outlines as you can: a tail is one `ribbon`, not five circles.
-- **Shading, the flat way.** Stack two `wash` layers (a darker one at `washOp` around 120 over the base), or give
-  the shape one `fill` layer. Two or three tones per object reads as volume; more than that starts to look painted.
-- **Light:** `glow(x, y, r, colour, a)`. Additive, so it stays warm on dark grounds and barely shows on light ones.
-  Draw it after the things behind it and before the things in front.
-- **Palette** `PAL`: `paper, ink, clay, clayDk, clayLt, night, indigo, rose, ochre, sap, teal, violet, cream, sky`.
-  `mixCol(a, b, k)` mixes two hex colours in RGB. Any hex works: pick a small palette per video.
-- **Boil stays.** `jit()` and `random()` are reseeded 12 times a second, so every shape wobbles slightly, like
-  hand-drawn animation. That is the look; do not fight it. Anything that must stay put frame to frame (star
-  positions, tuft heights) uses `hash(i)`; each independent element gets its own `boilSeed(key)`.
-- **Cost** is the number of paths. A frame is normally 1-20 ms; if you see hundreds, something is drawing a
-  thousand tiny shapes per frame.
+- **线：** `inkLine(pts, sw, colour, brush, curvature)`。`sw` 会按 `sw * INK_W`（3.2）换算成像素，所以 1080p 下 `sw: 1` 约等于 3 像素。全景镜头的轮廓用 1–2；特写压到 0.3–0.6，否则一根线就吃掉整个画面。
+- **形状：** `rectPts(x, y, w, h, jitter)`、`ellPts(cx, cy, rx, ry, n, jitter, rot)`、
+  `rrPts(x, y, w, h, r, jitter)`、`starPts`、`heartPts`、`through(P)`、`ribbon(P, w0, w1)`。
+- **一个形体一条轮廓。** 用尽量少的轮廓拼一个生物：一条尾巴是一个 `ribbon`，不是五个圆。
+- **扁平式的明暗。** 叠两层 `wash`（暗的一层 `washOp` 大约 120，压在底色上），或者给形状一层 `fill`。一个物体两三层调子读作体积；再多就开始像水彩了。
+- **光：** `glow(x, y, r, colour, a)`。叠加式，所以在暗底上偏暖，在亮底上几乎看不见。
+  画在它背后的东西之后、它前面的东西之前。
+- **调色板** `PAL`：`paper, ink, clay, clayDk, clayLt, night, indigo, rose, ochre, sap, teal, violet, cream, sky`。
+  `mixCol(a, b, k)` 在 RGB 里混合两个十六进制色。什么色都能用：每支片子挑一套小调色板。
+- **沸腾是留着的。** `jit()` 和 `random()` 每秒重新播种 12 次，所以每个形状都轻轻抖，像
+  手绘动画。这就是它的样子，别跟它较劲。凡是必须逐帧定住的东西（星星的位置、呆毛的高度）用 `hash(i)`；
+  每个独立元素给一个自己的 `boilSeed(key)`。
+- **成本**取决于路径数量。一帧通常 1–20 ms；如果你看到几百毫秒，那是有东西在每帧画上千个小形状。
 
-### The four things that will burn you
+### 会烧到你的四件事
 
-These cost an afternoon of rework while porting this engine from watercolour to flat.
+这四条在把引擎从水彩版迁到扁平版时，各烧掉了一个下午。
 
-1. **2D canvas puts the origin at the top-left; WEBGL puts it at the centre.** The watercolour build had
-   `translate(-W/2, -H/2)` at the top of `draw()` to wrench the WEBGL origin back to the corner. On a 2D canvas
-   that line shifts *everything* by half the frame. Delete it (and the matching compensation in `flushLetters()`).
+1. **2D canvas 的原点在左上角；WEBGL 的原点在中心。** 水彩版在 `draw()` 开头写了
+   `translate(-W/2, -H/2)`，把 WEBGL 的原点掰回角落。在 2D canvas 上，这一行会把**整张画面**平移半幅。
+   删掉它（以及 `flushLetters()` 里对应的补偿）。
 
-2. **`wash` is the colour; `fill` is only a second layer.** A shape with `wash` shows up. A shape with nothing but
-   `fill` degrades to a translucent block: fine for a puddle or a reflection, wrong for a wall. If a background
-   looks empty, it is usually because everything was written with `fill` and no `wash`.
+2. **`wash` 是颜色；`fill` 只是第二层。** 有 `wash` 的形状会出现。只有 `fill` 的形状会降级成
+   半透明色块：给水洼或反光是合适的，给一面墙就是错的。如果背景看着是空的，
+   通常是因为所有东西都写了 `fill` 而没写 `wash`。
 
-3. **`INK_W` scales every outline.** `sw` is not pixels: it is multiplied by 3.2. A line that looks right in a wide
-   shot becomes a black bar in a close-up. Scale `sw` down when the camera zooms in, and remember that flat
-   strokes have no taper: for a tapered look, stack two lines of different `sw`.
+3. **`INK_W` 会放大每一根轮廓。** `sw` 不是像素，它要乘 3.2。全景里看着正好的线，
+   到了特写就成了一条黑杠。相机推近时把 `sw` 压小；另外记住扁平描边没有锥形收笔：
+   要收笔感，就叠两条不同 `sw` 的线。
 
-4. **`karaoke.js` has to be loaded in `studio.html`, after `timeline.js`.** The template shipped without that line
-   for a while; the result is a film with no subtitles at all and no error anywhere. If lyrics vanish, check the
-   script tag before you debug the karaoke data.
+4. **`karaoke.js` 必须在 `studio.html` 里挂上，而且排在 `timeline.js` 之后。** 模板一度漏了这一行，
+   结果是一支完全没有字幕的片子，而且哪里都不报错。如果歌词不见了，先查这个 script 标签，
+   再去 debug 歌词数据。
 
-### Time and motion (all pure functions of t)
+### 时间与运动（全部是 t 的纯函数）
 
-- **Progress and keys:**
-  - `seg(t, a, b)`: 0..1 progress through [a, b]
-  - `kf(t, [[t0, v0], [t1, v1], ...], ease)`: keyframes; values may be arrays
-  - `lerp`, `clamp`, `frac`, `wob(t, freq, phase)`, `TAU`
-- **Easing:** `ease`, `easeIn`, `easeOut`, `backOut` (overshoot) and `elasticOut`.
-- **Rhythm:** `BEAT` (seconds per beat), `bpOf(t)` (beat position), `beatN(t)` (beat number), and `pulse(t, k)` / `pulse2(t, k)`, which are 1 on each beat (or eighth) and then decay.
-- **Acting:**
-  - `jump(t, t0, t1, h)`: crouch, stretch, arc and squash-land. Returns `{dy, sq}`.
-  - `take(t, t0, amt)`: a surprise take, returns `{sq, dy}`.
-  - `stroll(t, t0, t1, x0, x1, u)`: an eased walk. Returns `{x, walk, view, flip, dy}`.
-  - `spring(t, t0, k, w)`: a damped wobble after an event, for settles and follow-through.
-  - `ring(t, [t0, t1, ...])`: one `spring` kick per event time.
-  - `arcPt(p0, p1, h, k)`: a point on a thrown arc.
-  - `onTwos(t)`: holds each drawing for two frames. Wrap a shot's `t` in it for a snappier, hand-drawn feel.
-- **Camera:**
-  - `camBegin(cx, cy, zoom, rot)` … `camEnd()`: world point (cx, cy) lands at screen centre. One level only; always pair them.
-  - `toScreen(x, y)`: world → screen while a camera is active. Use it to aim an iris at a character.
-  - `shakeXY(t, amount)`: [dx, dy] to add to the camera on impacts.
-- **Full-frame effects** (screen space, after `camEnd()`):
-  - `brushWipe(p, [c1, c2])`: fat strokes cover the frame (p 0 → .5) and then drag off (.5 → 1). Cut under full cover. Its comment in timeline.js shows the two calls.
-  - `iris(cx, cy, r, colour)` and `irisShape(pts, colour)`: shaped reveals.
-  - `flash(k, colour)`: a full-frame flash.
-- **Lettering** (only if you must, see "No text"):
+- **进度与关键帧：**
+  - `seg(t, a, b)`：[a, b] 区间内的 0..1 进度
+  - `kf(t, [[t0, v0], [t1, v1], ...], ease)`：关键帧；值可以是数组
+  - `lerp`、`clamp`、`frac`、`wob(t, freq, phase)`、`TAU`
+- **缓动：** `ease`、`easeIn`、`easeOut`、`backOut`（过冲）和 `elasticOut`。
+- **节拍：** `BEAT`（每拍秒数）、`bpOf(t)`（拍位置）、`beatN(t)`（第几拍），以及 `pulse(t, k)` / `pulse2(t, k)`——每拍（或每个八分音符）为 1，然后衰减。
+- **表演：**
+  - `jump(t, t0, t1, h)`：下蹲、拉伸、走弧线、压扁落地。返回 `{dy, sq}`。
+  - `take(t, t0, amt)`：一个惊讶的 take，返回 `{sq, dy}`。
+  - `stroll(t, t0, t1, x0, x1, u)`：带缓动的走。返回 `{x, walk, view, flip, dy}`。
+  - `spring(t, t0, k, w)`：事件之后的阻尼晃动，用于落定和跟随。
+  - `ring(t, [t0, t1, ...])`：每个事件时刻踢一脚 `spring`。
+  - `arcPt(p0, p1, h, k)`：抛物弧线上的一个点。
+  - `onTwos(t)`：每张画撑两帧。把一镜的 `t` 包进去，能得到更"卡"、更像手绘的感觉。
+- **相机：**
+  - `camBegin(cx, cy, zoom, rot)` … `camEnd()`：世界坐标点 (cx, cy) 落到屏幕中心。只支持一层，必须成对写。
+  - `toScreen(x, y)`：相机激活时，世界坐标 → 屏幕坐标。用它把圆形遮罩对准某个角色。
+  - `shakeXY(t, amount)`：撞击时加到相机上的 [dx, dy]。
+- **全屏效果**（屏幕空间，写在 `camEnd()` 之后）：
+  - `brushWipe(p, [c1, c2])`：粗笔触铺满画面（p 0 → .5），然后拖走（.5 → 1）。在全覆盖之下切镜。timeline.js 里的注释写了这两处调用怎么写。
+  - `iris(cx, cy, r, colour)` 和 `irisShape(pts, colour)`：带形状的遮罩揭示。
+  - `flash(k, colour)`：全屏闪。
+- **文字**（只在万不得已时用，见"不要文字"）：
   - `letter(txt, x, y, size, colour, {pop, rot, alpha, screen})`
   - `sfx(txt, x, y, size, colour, age)`
-  - Both are composited at `flushLetters()`, after the shot. If a wipe or iris must cover them, call it yourself first.
+  - 两者都在镜头之后、由 `flushLetters()` 合成。如果擦除或遮罩要盖住它们，得自己先调用。
 
 ---
 
 ## Clawd
 
-Clawd is the Claude Code mascot: a terracotta block (`PAL.clay`), 10 units wide and 6 tall, with four stubby legs, two little arm nubs and two tall slit eyes. There's no mouth at rest. It's drawn in flat wash with an ink outline and boils like everything else. That's the default design, not a rule: change it if the idea needs it. Within one video, though, keep every character on model, with the same shape and features in every shot.
+Clawd 是 Claude Code 的吉祥物：一个赭色的方块（`PAL.clay`），宽 10 单位、高 6，四条短腿、两个小臂突、两只竖着的细长眼睛。静止时没有嘴。它用扁平 `wash` 加墨线轮廓画出来，和别的东西一样会沸腾。这是默认设计，不是规矩：故事需要就改。但在同一支片子里，每个角色都要"在设定上"——这件事由 `cast.js` 的规格与 guard 兜底（见下一节），不靠记性。
 
 ```js
-clawd(x, y, u, options)   // (x, y) = ground point between the feet; u = size unit
+clawd(x, y, u, options)   // (x, y) = 双脚之间的地面点；u = 尺寸单位
 ```
 
-**Sizes:** Clawd is 10u × 8u (legs included).
+### 规格与一致性：cast.js 是唯一的真源
 
-| shot | u | on screen |
+"每个镜头里都是同一个角色"靠的是机制，不是记性。三道硬规则全在 `cast.js` 里，guard 对违规**当场抛错**：
+
+1. **规格（`rig`）只写在 CAST 里**——几条腿、什么形状的手臂、有没有手指、什么眼、什么头型。场景 opts 里出现 `rig` / `legs` / `arms` / `arm` / `fingers` / `eye` / `head` / `noLegs`，包装函数直接拒绝。少一条腿、长出一根手指这种事在结构上发生不了，而不是渲出来才发现。（`eyes` 不在锁定名单里——它是合法的脸部参数，形态字段叫单数 `eye`。）
+2. **配件（`props`）默认在场**。CAST 里声明的配件每一镜自动带上；想拿掉必须显式写 `{ props: { hat: 'off' } }`。写 `null` 或拼错配件名（`scraf`）同样抛错——**"忘了"和"故意"必须在代码里长得不一样**，这是这条规则存在的全部意义。
+3. **画角色只走包装**（`lan()` / `man()` / …，由 CAST 表自动生成）。直接调 `clawd()` 会绕过配色、`boilKey` 和配件；表情一律走 `xMood()`——`emotions()` 不带 `base` 会在换表情那一瞬退回默认赭色。
+
+**朝向与手臂数**：`side` 视图本来就只画一条手臂（远侧被身体挡住）。这是正确的遮挡，不是 bug——**但跨镜换朝向必须走 `turn()`**。直接把 `view` 从 `'front'` 改成 `'side'`，中间没有转身过程，观众读到的就是"断了一条胳膊"。
+
+**角色版通用清单测试**（和场景那个是同一个测试，只是划掉的东西不同）：
+
+| | 划掉什么 | 划完剩不下 → 说明 |
 |---|---|---|
-| wide | 10–16 | small in the landscape |
-| medium | 20–28 | the usual acting size |
-| close-up | 40–70 | face acting |
-| extreme close-up | 90+ | camera pushed in on the eyes |
+| 场景（`design-first.md` §四） | "这种地方都该有的" | 类型背景板：知道是哪种地方，不知道自己在哪 |
+| **角色（这里）** | **"任何人形都该有的"**（眼睛、手、腿、嘴） | **你画的是一个人，不是它** |
 
-### Options
+Clawd 划完只剩三样：**竖缝眼、方块比例、两根无手指的臂桩**。这三样必须出现在每一镜里——它们是"认出是它"的全部依据，也是 `rig` 那行存在的理由。
 
-| group | options |
-|---|---|
-| pose | `dx`, `dy` (in u; −dy = up), `sq` (squash; negative stretches), `rot` (pivots at the feet), `flip`, `sx`, `sy`, `aL`, `aR` (arm angle: 0 = straight out, + = up, − = down; ±1.5 is vertical), `walk` (leg phase), `noLegs`, `noShadow` |
-| view | `view`: front, q, side, qback, back. `smear` 0..1 + `smearDir` ±1 (0 = both sides) for fast moves |
-| face | `eyes`, `mouth`, `lookX`/`lookY` (−1..1), `squint` 0..1, `blush` 0..1, `gloom` 0..1, `lid` 0..1, `seed` (blink timing) |
-| colour | `tint` (pale, flush, blue, rosy, green, gold, or any hex) + `tintK`, or `col`/`dk`/`lt` directly |
-| extras | `hat`, `emote` + `emoteK` (0..1 pop) + `emoteAge`, `draw(u, sw)`, `armL(u, sw)`, `armR(u, sw)` |
-| boil | `boilKey`: a stable id for its boil seeds (default: call order) |
+**加一个角色**：只在 `CAST` 表加一行（颜色 + rig + props），包装和表情函数自动生成，防线自动覆盖到它。
 
-Options compose by spreading: `clawd(x, y, u, { ...feel('happy', t), ...turn(t, 1, 1.15, 0, .25), hat: 'party' })`. Later spreads win, so put the emotion first and the pose after it. If both an emotion and a pose move the same field (`dy`, `sq`), add them together rather than letting one silently replace the other.
+**两道跨镜检查，渲之前跑（合计几秒）**：
 
-### Views and turns
-
-These are drawn key views. Every view faces screen-right; add `flip: true` to face left.
-
-| view | what you see |
-|---|---|
-| `front` | the face, both arms, four legs |
-| `q` | 3/4: the face shifted toward the heading, the side face as a darker strip behind it |
-| `side` | profile: one eye near the leading edge, one arm |
-| `qback` | 3/4 from behind: no face |
-| `back` | no face |
-
-- **Turn with `turn(t, t0, t1, a0, a1)`.** Headings are in turns: 0 = front, .25 = facing right, .5 = back, −.25 = facing left. It steps through the key views over 0.12–0.25 s with smears, like a drawn turn. For a single heading, use `spinView(a)`.
-- **Walks across the screen** read best in `side` view with `walk` driving the legs. `stroll()` gives `q`; override it with `view: 'side'` for a trot.
-- **Facing right, `aL` is the near arm** (drawn in front of the body), and the far arm is behind and darker.
-
-### Emotions
-
-31 emotions. Each is a face, a colour and a way of moving, all locked to the beat. `feel(name, t, over)` returns all of it at time t:
-
-```js
-clawd(x, y, u, feel('happy', t));                                   // one emotion, alive
-clawd(x, y, u, feel('sad', t, { view: 'q', lookX: -1 }));             // with overrides
-clawd(x, y, u, emotions(t, [[0, 'sleepy'], [1.9, 'surprised', { lookX: .8 }], [2.5, 'idea']]));   // acted changes
+```bash
+node scripts/check_cast.mjs    # 静态：直接调 clawd / 无 base 的 emotions / 未知配件键 / noLegs
+node render.mjs --cast         # 契约表：一个角色一行、一列一镜、同一尺度——方头缺脚一眼看出
 ```
 
-| family | emotions |
+契约表和 4b 全片总结图互补：那张回答"场景换没换"，这张回答"人变没变"。
+
+**尺寸：** Clawd 是 10u × 8u（含腿），头是 6u 高。
+
+| 镜头 | u | 屏幕上的大小 | 框里必须还看得到 |
+|---|---|---|---|
+| 全景 | 10–16 | 风景里小小的 | 整个人 + 一片环境 |
+| 中景 | 20–28 | 常规表演尺寸 | 全身 + 一点环境 |
+| 特写 | 40–70 | 面部表演 | 整张脸 |
+| 极特写 | 90–140 | 相机怼到眼缝上 | **第二样东西**：另一条眼缝 / 脸颊的边 / 腮红 / 帽檐 |
+
+**140 是代理阈值，实测标定的。** 渲一条测试条（u=60→222 五档 × 两种取景：整脸居中 / 单眼居中）就能看到：
+
+- 整脸居中：u=180 还读得出是脸（两只眼都在框里），**222 彻底失守**——一块平色浮着两条黑缝。
+- 单眼居中（"海装在缝里"那种取景）：**180 就已经失守**——一条缝加一片平色，第二只眼和脸的边界全在框外。
+
+算术对得上：头高 6u、画框高 1080，u=180 时头正好顶满画框。**但坏不坏，由"框里有没有第二样东西"决定，u 只是它的代理**——所以真正的判据是下面这条，数字只用来当渲之前的绊线。U=222 那次翻车正是单眼取景：形状一点没错，可框里已经没有任何东西说明"这是一张脸"。
+
+### 极特写：识别靠比例，不靠形状
+
+一个形状单独放大，参照物消失，它就退化成抽象图形——**竖缝眼和窗子是同一个形状，区别只在旁边有没有一张脸**。
+
+所以极特写的判据不是"推多远"，是"框里还剩什么"：
+
+- **至少两样东西同框**：主体（那条眼缝）+ 一个能说明"这是一张脸"的参照（另一条眼缝给眼距、脸颊的边给脸宽、腮红和帽檐给位置）。只有主体 = 抽象画。
+- **两条眼缝一起进框**是最省事的解法：眼距本身就是最强的比例尺，不用再加东西。
+- **极特写是一下，不是一段**：它只做短镜（0.5–1.2 秒），前后用中景夹住。停久了观众就有时间研究那块颜色到底是什么，答案通常是"墙"。
+- 真要更近（想让人只看见一条缝里的海），就把参照**放进缝里**——海平线、小船、不是脸的一部分，但提供了"这条缝有内容"的线索。这一招在小镇姑娘那支片子里用过，效果比推得更近好。
+
+**这一条和上面的「部件清单」是同一问的两端**：部件清单管**画了什么**，这一条管**还认不认得出**。
+
+**而"粉墙挂两扇小窗"这个症状，出现过两次，病因完全不同**：
+
+| 哪一次 | 病因 | 怎么坏的 |
+|---|---|---|
+| 第一次 | 照着人的解剖画 | 形状错：眼白、眼眶、上下眼睑全套照搬 |
+| 第二次 | 推太近 | 形状没错，比例参照没了：竖缝眼是真的，但旁边没有脸 |
+
+**症状相同、病因不同，说明判据不能写在"画法"上，只能写在"结果"上。** 「别画眼白」「别超过 u=140」各自只能堵一条路；**「把这一格单独截出来，第一眼读到的是脸，还是墙面」**一次管住两条——它也是 4a 的第一问。
+
+### 参数
+
+| 组 | 参数 |
 |---|---|
-| joy | happy, excited, laugh, love, proud, starstruck, playful, hopeful, relieved |
-| sly | smug, cool, mischief, suspicious |
-| low | sad, cry, bored, sleepy, ko |
-| hot | angry, furious (the lunchbox lid opens), determined, disgusted |
-| alarm | scared, nervous, surprised, confused, dizzy |
-| mind | neutral, thinking, idea, shy |
+| 姿势 | `dx`、`dy`（单位 u；−dy = 向上）、`sq`（挤压；负值拉伸）、`rot`（以双脚为轴）、`flip`、`sx`、`sy`、`aL`、`aR`（手臂角度：0 = 平伸，+ = 向上，− = 向下；±1.5 是垂直）、`walk`（腿的相位）、`noLegs`（走包装会被 guard 拦、静态检查会报——只给腿真在画框外或水里的镜头用）、`noShadow` |
+| 视角 | `view`：front、q、side、qback、back。快速移动用 `smear` 0..1 + `smearDir` ±1（0 = 两侧） |
+| 脸 | `eyes`、`mouth`、`lookX`/`lookY`（−1..1）、`squint` 0..1、`blush` 0..1、`gloom` 0..1、`lid` 0..1、`seed`（眨眼时机） |
+| 颜色 | `tint`（pale、flush、blue、rosy、green、gold，或任意十六进制）+ `tintK`，或者直接 `col`/`dk`/`lt` |
+| 附加 | `hat`、`emote` + `emoteK`（0..1 弹出）+ `emoteAge`、`draw(u, sw)`、`armL(u, sw)`、`armR(u, sw)` |
+| 沸腾 | `boilKey`：它沸腾种子的固定 id（默认：调用顺序） |
 
-- **`emotions(t, keys)`** is how moods change in a shot. Around each key it squints and squashes just before the change (anticipation), swaps the face under the squint, and fires a take sized to the new emotion. The body then settles into the new motion with overshoot, colour cross-fades and the new emote pops in.
-  - `emotions(t, keys, { take: .5 })` scales every take.
-  - The third element of a key overrides fields for that stretch (e.g. `{ lookX: .8, emote: 'music' }`).
-- To make a new emotion, add an entry to `EMO` in clawd.js. It needs eyes, mouth, optional tint/blush/gloom/lid/emote, `take` (reaction size) and `body(t)` (its idle motion, locked to the beat through `_b(t)`).
+参数靠展开来组合：`clawd(x, y, u, { ...feel('happy', t), ...turn(t, 1, 1.15, 0, .25), hat: 'party' })`。后展开的赢，所以情绪放前面、姿势放后面。如果情绪和姿势都要改同一个字段（`dy`、`sq`），要把它们加起来，而不是让一个悄悄盖掉另一个。
 
-### Parts
+### 视角与转身
 
-- **Eyes:** normal, look, wide, happy, closed, sleepy, wink, narrow, angry, determined, sad, teary, cry, squeeze, shine, scared, blank, spark, red, heart, x, swirl, dot, shades.
-  - A pair gives mismatched eyes, e.g. `['narrow', 'wide']`.
-  - `lookX`/`lookY` aim the pupils, and `squint` closes the eyes from any shape.
-- **Mouths:** o, O, smile, grin, flat, wobble, cat, frown, smirk, laugh, open, wail, teeth, tongue, pout, yawn. Use `null` for none (Clawd's resting face).
-- **Lunchbox lid:** `lid` 0..1 hinges the top of the body open, with teeth pointing into the mouth. It's for fury, chomping and shouting, in the front view only.
-- **Hats:** party, hard, crown, halo, wizard, hood, top, fedora, band, sweatband, beanie, bow, flower, headphones, cat (ears and whiskers). Face pieces: masq, mask, bowtie.
-- **Emotes** are painted marks that pop in by the head: `!` `?` `!!` `!?` zzz, sweat, spark, heart, hearts, anger, steam, bulb, dots, scribble, music, swirl, stars, cloud.
-  - `emoteK` is the 0..1 pop and `emoteAge` drives the looping ones; `emotions()` sets both.
-  - `emote(kind, x, y, s, k, age)` draws one anywhere, for example over a prop.
-- **Body colour:**
-  - `tint` shifts it with the mood: pale (fear), flush (anger), blue (sadness), rosy (love), green (disgust), gold (pride).
-  - `gloom` adds a dark forehead with hanging lines, and `blush` adds cheeks (hatched when above .6).
+这些都是画出来的关键视角。每个视角都朝屏幕右侧；要朝左就加 `flip: true`。
 
-### Hooks: props and accessories
+| 视角 | 你看到的 |
+|---|---|
+| `front` | 正脸、两只手臂、四条腿 |
+| `q` | 3/4：脸朝行进方向偏移，侧脸作为一条更暗的带子在后面 |
+| `side` | 侧脸：一只眼睛靠在前缘，一只手臂 |
+| `qback` | 从背后看的 3/4：没有脸 |
+| `back` | 没有脸 |
 
-- **`draw(u, sw)`** paints in body-local space, on top of everything else on the body (face, hat, near arm). It squashes, flips and rotates with Clawd. Front-view coordinates:
-  - the body spans x −5u..5u and y −8u..−2u
-  - the eyes are at (±2.5u, −6u)
-  - the mouth is near (0, −4.3u)
-- **`armL(u, sw)` / `armR(u, sw)`** are called at the arm tip, in arm space (+x runs outward along the arm), so a held prop just draws around (0, 0) and follows the arm automatically:
+- **用 `turn(t, t0, t1, a0, a1)` 转身。** 朝向以"圈"为单位：0 = 正面，.25 = 朝右，.5 = 背面，−.25 = 朝左。它在 0.12–0.25 秒内带残影逐级走过关键视角，像一次画出来的转身。只给一个朝向就用 `spinView(a)`。
+- **横穿画面的走**用 `side` 视角最好看，`walk` 驱动腿。`stroll()` 给的是 `q`；要小跑就用 `view: 'side'` 覆盖掉。
+- **朝右时，`aL` 是近侧手臂**（画在身体前面），远侧手臂在后面、更暗。
+
+### 表情
+
+31 种表情。每一种都是一张脸、一种颜色、一套动法，全部锁在拍子上。`feel(name, t, over)` 一次返回某个时刻的全部：
 
 ```js
-clawd(x, y, 24, { ...feel('proud', t), aR: 1.2, armR: (u, sw) => paint(starPts(u * .8, 0, u * 1.4, .5, 5), { wash: '#FFE27A', sw }) });
+clawd(x, y, u, feel('happy', t));                                   // 一种情绪，活着
+clawd(x, y, u, feel('sad', t, { view: 'q', lookX: -1 }));             // 带覆盖
+clawd(x, y, u, emotions(t, [[0, 'sleepy'], [1.9, 'surprised', { lookX: .8 }], [2.5, 'idea']]));   // 演出来的变化
 ```
 
-- Anything the arms can't carry, like a big object overhead, is drawn separately at a point computed from the same pose. The demo's star does this. Make sure it touches: check it with a crop.
+| 家族 | 表情 |
+|---|---|
+| 喜 | happy, excited, laugh, love, proud, starstruck, playful, hopeful, relieved |
+| 狡 | smug, cool, mischief, suspicious |
+| 低 | sad, cry, bored, sleepy, ko |
+| 怒 | angry, furious（便当盒盖会打开）, determined, disgusted |
+| 惊 | scared, nervous, surprised, confused, dizzy |
+| 心 | neutral, thinking, idea, shy |
 
-### Dances
+- **`emotions(t, keys)`** 是一镜之内换情绪的方式。每个关键点周围，它先在变化前眯眼、压扁（预备），在眯眼之下换脸，再按新情绪的体量打一个 take。然后身体带过冲地落进新的动法，颜色交叉淡入，新 emote 弹出。
+  - `emotions(t, keys, { take: .5 })` 缩放所有 take。
+  - 关键点的第三个元素覆盖那一段的字段（例如 `{ lookX: .8, emote: 'music' }`）。
+- 要做新表情，就在 clawd.js 的 `EMO` 里加一条。它需要 eyes、mouth，可选的 tint/blush/gloom/lid/emote，`take`（反应体量）和 `body(t)`（它的待机动作，通过 `_b(t)` 锁在拍子上）。
 
-`move(style, t, seed)` returns beat-locked pose offsets. The styles are bounce, hop, roof (arms up), sway, spin (a drawn spin through the key views once a bar), wave, walk, run, idle, stomp and shimmy. `mix` changes style every two bars. `dancer(x, y, u, style, t, extra)` is `clawd` + `move`. You can combine a dance with a face: `{ ...move('bounce', t), eyes: 'happy', mouth: 'grin' }`.
+### 部件清单：清单之外不许加东西
+
+`rig` 那行是**白名单**，不是备忘。画的时候只画清单上有的部件，多一样都算换了角色。
+
+| 部件 | 它是什么 | **它不是什么**（这一列更要紧） |
+|---|---|---|
+| 眼睛 | 一条竖直的细缝，可开合、可看向（`eyes` 的 24 种形状都是这条缝的变体） | 不是人眼：**没有眼白、眼皮、睫毛、圆瞳孔、虹膜、高光点** |
+| 手臂 | 两根圆头的臂桩，末端是弧 | 不是人臂：**没有手掌、没有手指、没有手腕、没有肘关节** |
+| 腿 | 四条短腿 | 不是人腿：**没有膝盖、没有脚掌、没有脚趾** |
+| 头 | 方块，宽 10u 高 6u，四角微圆 | 不是圆头、不是蛋形、不是带下巴的人头 |
+| 嘴 | 静止时没有嘴（`mouth: null`） | 不是一直张着的嘴；牙齿只在 `lid` 掀盖时出现 |
+
+**"不是什么"这一列是拿来挡自己的。** 人的先验会自动补全：不写"没有手指"，手就会自己长出指头来——因为脑子里那只"手"本来就有指头。你看不见自己补了什么，只看得到画完不像它。
+
+**同一支片子真实翻过两次，是同一个病**：
+
+- 唱"眼睛里的大海"，按人眼解剖画成了"粉墙挂两扇小窗"——眼白、眼眶、上下眼睑全套照搬。改成竖缝、海装在缝里，才既认得出是它、又看得出海在哪。
+- 要画"按压玻璃的手"，多问了一句"给它弄个手掌合适吗"——臂桩上又长出了手掌。**它从来没有手。**
+
+**要改设定就改 `CAST`**：改完契约表那一行跟着变，全片生效。绝不在某一镜里单独加一个部件——那是全片唯一的例外，而例外一旦开口子，就没有第二道防线了。
+
+### 部件
+
+- **眼睛：** normal, look, wide, happy, closed, sleepy, wink, narrow, angry, determined, sad, teary, cry, squeeze, shine, scared, blank, spark, red, heart, x, swirl, dot, shades。
+  - 传一对就能做出不配对的眼睛，例如 `['narrow', 'wide']`。
+  - `lookX`/`lookY` 控制瞳孔方向，`squint` 能从任何形状把眼睛闭起来。
+- **嘴：** o, O, smile, grin, flat, wobble, cat, frown, smirk, laugh, open, wail, teeth, tongue, pout, yawn。用 `null` 表示没有嘴（Clawd 的静止脸）。
+- **便当盒盖：** `lid` 0..1 把身体顶部掀开，牙齿朝嘴的方向伸。用于暴怒、咬东西和喊叫，只在正面视角有效。
+- **帽子：** party, hard, crown, halo, wizard, hood, top, fedora, band, sweatband, beanie, bow, flower, headphones, cat（耳朵和胡须）。脸部配件：masq, mask, bowtie。
+- **Emote** 是在脑袋边弹出的画出来的记号：`!` `?` `!!` `!?` zzz、sweat、spark、heart、hearts、anger、steam、bulb、dots、scribble、music、swirl、stars、cloud。
+  - `emoteK` 是 0..1 的弹出量，`emoteAge` 驱动会循环的那些；`emotions()` 会设置这两个。
+  - `emote(kind, x, y, s, k, age)` 能在任意位置画一个，例如画在一个道具上。
+- **身体颜色：**
+  - `tint` 随情绪改变颜色：pale（恐惧）、flush（愤怒）、blue（悲伤）、rosy（爱）、green（厌恶）、gold（自豪）。
+  - `gloom` 加上一块暗额头和垂线，`blush` 加腮红（超过 .6 时变成排线）。
+
+### 钩子：道具与配件
+
+配件分两种，别混：
+
+- **常驻的**（围巾、帽子、挂牌）写在 `CAST.props`，默认在场、全片自动带上。位置读 `CLAWD_ANCHORS`，不许手写 y。
+- **一次性的**（这一镜手里的星星）用下面的钩子，随调用传。它会跟着这一镜的动作走，但下一镜不传就没有——所以判断标准是：**这个东西要不要出现在不止一个镜头里？要，就升级成 props。**
+
+- **`draw(u, sw)`** 在身体局部空间里画，画在身体上其他一切之上（脸、帽子、近侧手臂）。它随角色一起挤压、翻转、旋转。正面视角的坐标：
+  - 身体横跨 x −5u..5u，纵跨 y −8u..−2u
+  - 眼睛在 (±2.5u, −6u)
+  - 嘴大约在 (0, −4.3u)
+- **`armL(u, sw)` / `armR(u, sw)`** 在手臂末端、以手臂空间调用（+x 沿手臂向外），所以手里拿的道具只要围着 (0, 0) 画，就自动跟着手臂走：
+
+```js
+man(x, y, 24, { ...feel('proud', t), aR: 1.2, armR: (u, sw) => paint(starPts(u * .8, 0, u * 1.4, .5, 5), { wash: '#FFE27A', sw }) });
+```
+
+- 手臂拿不住的东西（比如举在头顶的大物件），要在同一套姿势算出的点上单独画。demo 里那颗星星就是这么做的。一定要确保它贴上：用 crop 检查。
+
+### 舞蹈
+
+`move(style, t, seed)` 返回锁在拍子上的姿势偏移。风格有 bounce、hop、roof（双手举起）、sway、spin（每小节沿关键视角画一次转身）、wave、walk、run、idle、stomp 和 shimmy。`mix` 每两小节换一次风格。`dancer(x, y, u, style, t, extra)` 就是 `clawd` + `move`。舞蹈可以和脸组合：`{ ...move('bounce', t), eyes: 'happy', mouth: 'grin' }`。
 
 ---
 
-## Music (optional)
+## 音乐（可选）
 
-The kit doesn't need music, but it's built for it:
+这套工具不需要音乐，但它是为音乐准备的：
 
-1. Set `bpm` to the song's tempo in [src/config.js](src/config.js), and set `offset` to the time of its first downbeat in seconds. Every idle, dance and `pulse()` then locks to the song.
-2. Put the audio in `assets/` and set `PROJECT.audio` (or pass `--audio=`). `--clip` and `--encode` mux it in.
-3. Land hits, cuts and takes on beats (`beatN`, `pulse`). Cut on bar lines for big changes, and give each musical phrase its own visual.
-4. **Lyrics are not text.** Don't put words on screen. Act the meaning of a line instead.
+1. 在 [src/config.js](src/config.js) 里把 `bpm` 设成歌的速度，把 `offset` 设成它第一个强拍的时间（秒）。此后每个待机、舞蹈和 `pulse()` 都锁在歌上。
+2. 把音频放进 `assets/`，设 `PROJECT.audio`（或者传 `--audio=`）。`--clip` 和 `--encode` 会把它混进去。
+3. 让冲击、切点和 take 落在拍子上（`beatN`、`pulse`）。大变化切在小节线上，每个乐句给它自己的画面。
+4. **歌词不是文字。** 不要把词写到屏幕上。去演一句词的意思。
 
-## Common failures
+## 常见翻车
 
-These are the things that make a Clawd video look generated. Check your storyboard and sheets against them:
+下面这些会让一支 Clawd 视频看起来像"生成的"。拿你的分镜和 sheet 对照着查：
 
-- signs, captions, labels or speech bubbles with words
-- Clawd standing still and smiling while nothing happens
-- everything moving at one brisk speed, with events stacked on top of each other and no holds
-- moments that are over before the viewer understands them
-- a tiny Clawd in a big empty landscape for the whole video
-- faces that snap from one expression to another
-- mechanical motion: linear moves, every part moving at once, both arms or several characters in sync
-- timid poses and takes that barely read
-- jittery linework: still things re-boiling every frame because something moving before them shifted the random stream (`boilSeed`)
-- hard cuts everywhere, or a video that just starts and stops
-- 3D rotation, perspective boxes or projected turns
-- plain p5 shapes, gradients or digital glows mixed into the paint (use `paint`/`inkLine`/`glow`)
-- muddy green-grey glows from painting yellow over blue
-- props floating near a hand instead of touching it
-- every shot a different world with nothing linking them
+- 招牌、字幕、标签，或者带字的对话气泡
+- Clawd 站着不动、面带微笑，什么都没发生
+- 所有东西一个轻快的速度，事件层层叠压，没有停顿
+- 观众还没看懂就结束的瞬间
+- 整支片子里，一个小小的 Clawd 待在一大片空风景里
+- 从一个表情啪一下切到另一个表情
+- 机械的运动：线性移动、所有部位一起动、两条胳膊或几个角色完全同步
+- 姿势和 take 太拘谨，几乎读不出来
+- 抖动的线条：静止的东西每帧都在重新沸腾，因为前面有东西动了、把随机流推走了（`boilSeed`）
+- 到处都是硬切，或者一支片子就那么开始、那么停住
+- 3D 旋转、透视盒子，或者投影出来的转身
+- 混进画面里的 p5 原生图形、渐变或数字辉光（用 `paint`/`inkLine`/`glow`）
+- 黄压蓝压出来的发绿发灰的光晕
+- 道具飘在手的附近，而不是贴着手
+- 每一镜都是不同的世界，彼此之间没有任何联系
+- 同一个角色跨镜变了形状：多了少了腿和手臂、头型不一样、配件某一镜起悄悄消失——直接调 `clawd()`、跨镜换 `view` 不走 `turn()`、配件不写在 `CAST.props`，都会这样（`--cast` 一眼看出）
 
-## About the demo
+## 关于这个 demo
 
-[src/scenes/demo.js](src/scenes/demo.js) ("The fallen star") exists to show the kit working: an acted emotion timeline, a drawn turn, a trot, a pickup, a throw on an arc, `glow`, a brush wipe and an iris in and out. **It's one idea, not a template.** Don't reuse its story, night sky, hills, star or shot structure. Start from the prompt and your own storyboard, and replace its script tag in `studio.html` with yours.
+[src/scenes/demo.js](src/scenes/demo.js)（"The fallen star"）是用来展示这套工具在工作的：一条演出来的情绪时间线、一次画出来的转身、一段小跑、一次捡起、一次沿弧线的投掷、`glow`、一次笔刷擦除，以及一进一出的圆形遮罩。**它只是一个想法，不是模板。** 不要复用它的故事、夜空、山丘、星星或镜头结构。从提示和你自己的分镜出发，并把 `studio.html` 里它的 script 标签换成你自己的。
 
-### Worked example: how the demo times its ending
+### 推演范例：demo 是怎么给结尾排时间的
 
-This shows rule 4 applied to one shot of one video. The reads, the numbers and the way it ends are specific to this story; yours will be different. Read it for the reasoning, not the numbers. It's the demo's last shot, from the throw on, in video time:
+这里展示了规则 4 如何用在某支片子的某一个镜头上。它的 reads、那些数字和收尾方式都属于这个故事；你的会不一样。读它的推理，不要读它的数字。这是 demo 的最后一镜，从投掷那一刻算起，按视频时间：
 
-| time | read | why it's timed this way |
+| 时间 | read | 为什么这样排 |
 |---|---|---|
-| 6.95–7.1 | wind-up and throw | fast motion; it reads because the wind-up anticipates it |
-| 7.1–7.9 | the star flies home | long enough for the eye to follow it from Clawd to the top of the frame; the camera eases back to give it sky |
-| 7.9–8.35 | it arrives: a flare, a sparkle, the sky twinkles | the payoff. Clawd only watches, so nothing competes with it |
-| 8.35–8.95 | Clawd falls in love | the reaction starts only after the viewer has seen the cause |
-| 8.95–9.4 | Clawd waves goodbye | a new action, on its own |
-| 9.4–9.8 | the star twinkles back | the answer to the wave |
-| 9.8–11.0 | iris to Clawd, hold, shut | the last read gets time to land before the video ends |
+| 6.95–7.1 | 回拉然后扔出 | 快动作；因为有回拉做预备，所以读得懂 |
+| 7.1–7.9 | 星星飞回家 | 够长，让眼睛能跟着它从 Clawd 飞到画面上方；相机缓缓退开，给它天空 |
+| 7.9–8.35 | 它到了：一记闪光、一点星芒、整片天开始闪 | 这是兑现。Clawd 只是在看，所以没有东西跟它抢 |
+| 8.35–8.95 | Clawd 爱上了 | 反应要等观众先看见原因才开始 |
+| 8.95–9.4 | Clawd 挥手告别 | 一个新动作，自己占一段时间 |
+| 9.4–9.8 | 星星闪了闪，回应他 | 对挥手的回答 |
+| 9.8–11.0 | 圆形遮罩收到 Clawd、停住、关合 | 最后一条 read 有时间落地，片子才结束 |
 
-The first version packed all of this into about 1.3 s, and nobody could tell what had happened.
+第一版把这一切塞进大约 1.3 秒，结果没人看得出发生了什么。

@@ -2,90 +2,91 @@
 
 # painted-animation
 
-<a href="README.md"><img src="https://img.shields.io/badge/English-2B2233?style=for-the-badge" alt="English"></a>
-<a href="README.zh-CN.md"><img src="https://img.shields.io/badge/简体中文-D97757?style=for-the-badge" alt="简体中文"></a>
-
-A Claude Code skill for producing hand-painted animation and lyric videos with Claude Opus 5.5.
-Part of [opus-video-skills](../../README.md).
+基于 Claude Opus 5.5 的手绘风格动画与歌词 MV 制作技能（Claude Code Skill）。
+属于 [opus-video-skills](../../README.md) 合集。
 
 </div>
 
 ![小镇姑娘](docs/xiaozhen-sheet.jpg)
 
-## Overview
+## 概述
 
-The skill enables Claude Opus 5.5 to produce complete animated videos, including storyboarding, character animation, camera work, transitions, music synchronisation and karaoke subtitles. All imagery is drawn procedurally in code; no image generation model is involved.
+本技能使 Claude Opus 5.5 能够独立完成动画视频的制作，涵盖故事构思、分镜设计、角色动画、镜头运动、转场、音乐同步与卡拉 OK 字幕。所有画面均由代码程序化绘制，不依赖任何图像生成模型。
 
-The method is derived from two projects by John Heibel: [PDoomVideo](https://github.com/JohnHeibel/PDoomVideo), a 156-second music video produced largely autonomously by Opus 5.5, and [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase), a general-purpose animation kit based on it. This skill packages both into a single workflow and extends it with a lyric-video pipeline that covers tempo detection, audio clipping and karaoke subtitles.
+该方法源自 John Heibel 的两个项目：[PDoomVideo](https://github.com/JohnHeibel/PDoomVideo) 和 [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase)。前者是一部主要由 Opus 5.5 自主完成的 156 秒音乐视频，后者是在其基础上整理的通用动画工具包。本技能将二者整合为统一的工作流程，并在此基础上增加了歌词 MV 流程，包括节拍检测、音频剪辑与卡拉 OK 字幕。
 
-## How It Works
+## 技术原理
 
-1. **Intake and storyboard.** For a music video, Claude first requests the audio and LRC lyrics, then asks one optional natural-language question about the desired story and overall feeling, recurring imagery and anything to avoid. It never splits this into five separate questions or fields. The user may answer in one sentence or leave it blank. Claude then writes a shot list covering setting, palette, character arc and transitions. For each shot it lists the "reads", the timed sequence of what the viewer must understand.
-2. **Drawing.** Each shot is a JavaScript function that draws the complete frame with p5.js canvas 2D — solid colour blocks, ink outlines, a little line boil. Every frame is a pure function of time.
-3. **Review.** Small contact sheets, frame strips and close-up crops may be rendered in the cloud. Claude inspects the images and revises the code until each shot meets the guidelines.
-4. **Output.** Claude never starts a complete render without asking whether to render locally or in the cloud. Choosing local prohibits cloud full rendering and produces exact local commands instead. Frames are rendered in parallel and encoded to MP4 with ffmpeg, with audio muxed in if provided.
+1. **素材收集与量拍。** 制作音乐 MV 时，Claude 会先索取歌曲音频和 LRC 歌词文件，再用一个可留空的自然问题，一次性询问用户希望呈现的故事与整体感觉、想贯穿的画面元素以及需要避开的内容。禁止拆成五个问题或五项表单；用户只需回答一句话，也可以留空。随后用 `beat_grid.py` 实测速度，定出段落骨架——哪段是副歌、无词段各承担什么任务、转折落在哪一小节。
+2. **写故事。** 在量拍之后、画分镜之前，先写清五样东西：一句话的 logline（谁想要什么、被什么拦住、最后变成了什么）、一个只有单一欲望的主角、一个真的画得出来的实体阻碍、一张 3–5 拍的节拍表（每拍绑死某一段、某一行歌词）、以及结尾与开头的押韵。故事的高潮必须落在副歌上。做完再做一次双向测试：抽掉歌词这个故事还成立吗，抽掉画面这首歌还成立吗——两个都必须是"是"。这一步是给自己用的思考工具，不拿去等用户确认。
+3. **分镜与设计。** 编写镜头表，确定场景、配色、角色情绪线与转场方式。每个镜头都列出观众需要依次理解的信息，并为每条信息分配时间。镜头在哪切由节奏决定，不由"这句唱完了"决定。
+4. **绘制。** 每个镜头是一个 JavaScript 函数，用 p5.js 的 canvas 2D 画出完整画面——实色块、墨线描边、轻微线条沸腾。每一帧都由时间唯一确定。
+5. **审查。** 少量关键帧拼图、短逐帧序列与局部特写可以在云端渲染，由 Claude 检查画面并修改代码，直至每个镜头符合规范。
+6. **输出。** Claude 禁止未经询问直接开始完整渲染，必须让用户明确选择本地或云端。选择本地后禁止云端全量渲染，并改为提供准确的本地执行命令。各帧并行渲染后，由 ffmpeg 编码为 MP4；如提供音频，一并合入。
 
-## Characteristics
+## 主要特性
 
-- **Character consistency.** Each character is defined by a single drawing function, so its design is identical across all shots.
-- **Frame-accurate timing.** Because frames are computed from time, events can be aligned precisely to beats or to individual sung syllables.
-- **Localised revision.** A change to one element requires editing only the relevant code and re-rendering the affected range; the rest of the video is unaffected.
-- **Built-in animation principles.** The engine provides anticipation, squash and stretch, follow-through and acted expression changes as reusable functions.
-- **Automated self-review.** Rendered frames are checked against an explicit list covering legibility, timing, contacts, transitions and colour.
+- **角色一致性。** 每个角色由单一绘制函数定义，在所有镜头中造型保持一致。
+- **逐帧精确的时间控制。** 画面由时间计算得出，事件可精确对齐到节拍乃至单个唱词。
+- **局部修改。** 修改某一元素只需调整相应代码并重新渲染受影响的片段，其余部分不受影响。
+- **内置动画原理。** 引擎以可复用函数的形式提供预备动作、挤压与拉伸、跟随动作及表情过渡。
+- **自动审查。** 渲染画面会依据明确的检查清单逐项核对，涵盖可读性、节奏、接触关系、转场与色彩。
 
-## Example: 小镇姑娘 (David Tao)
+## 示例：陶喆《小镇姑娘》
 
 <p align="center"><img src="docs/koi-gag.gif" width="520" alt="大经理 → 大锦鲤"></p>
 
-A 31-second lyric video for one verse of the song. Inputs: the lyrics, a request to take the song's wider context into account, a request to include the fan wordplay in which "大经理" (big manager) is heard as "大锦鲤" (big lucky koi), the audio file, and LRC timestamps.
+本例为该曲一段主歌的 31 秒歌词 MV。输入包括：歌词；参考整首歌上下文的要求；体现歌迷将"大经理"谐音为"大锦鲤"这一梗的要求；原曲音频；LRC 时间轴。
 
-- **Setting.** One small-town railway station throughout, with the ending mirroring the opening: her departure by train one year earlier, and his own departure at the end.
-- **Visual motif.** A flower identifies the female character in each of her forms: at the train window, on the television, as a koi, and as a star.
-- **Timing.** The song measures 154 BPM with 8 beats per line, and all action is cut to that grid.
-- **Wordplay.** On the syllables "经理", the television image transforms into a koi while the subtitle is struck through and replaced with "锦鲤". The koi then leaves the screen and becomes the "shining star" of the following line.
+- **场景。** 全片设定在同一座小镇火车站，首尾呼应：开头为一年前女主角乘火车离开，结尾为男主角登上火车离去。
+- **视觉线索。** 女主角头上的小花贯穿她的各个形态：车窗中、电视里、锦鲤与星星。
+- **节奏。** 经测定，歌曲速度为 154 BPM，每句 8 拍，全部动作均按此节拍剪辑。
+- **谐音梗。** 唱到"经理"时，电视画面中的人物变为锦鲤，字幕中的"经理"同时被划去并替换为"锦鲤"；随后锦鲤跃出屏幕，化作下一句中"闪亮的星星"。
 
-The storyboard and scene code are available in [examples/xiaozhen](examples/xiaozhen/). The audio is not included for copyright reasons.
+分镜与场景代码见 [examples/xiaozhen](examples/xiaozhen/)。因版权原因，仓库中不包含音频。
 
-## Requirements
+## 环境要求
 
-- Claude Code with Claude Opus 5.5
-- Node.js, Google Chrome, ffmpeg
-- Python 3 with numpy (for tempo detection only)
+- Claude Code 及 Claude Opus 5.5
+- Node.js、Google Chrome、ffmpeg
+- Python 3 及 numpy（仅节拍检测需要）
 
-## Installation
+## 安装
 
-See the [collection README](../../README.md#installation). As a plugin:
+参见[合集说明](../../README.md#安装)。以插件方式安装：
 
 ```
 /plugin marketplace add tuzhechen2005/opus-video-skills
 /plugin install painted-animation@opus-video-skills
 ```
 
-## Usage
+## 使用方法
 
-Describe the desired video in Claude Code, for example:
+在 Claude Code 中描述所需视频，例如：
 
-> Make a 15-second video of Clawd trying to catch a butterfly.
+> 制作一段 15 秒的动画：Clawd 试图抓住一只蝴蝶。
 
-> Make a lyric video for this song. (with the audio file, LRC file, and a short description of the story and mood)
+> 为这首歌制作歌词 MV。（附音频文件、LRC 文件，并说明歌曲的大致故事和意境）
 
-The skill can also be invoked directly with `/painted-animation`. It creates a project, presents a storyboard, builds and reviews each shot, and asks whether the full final render should run locally or in the cloud. Rendering is fast because a frame is only filled paths: a 1350-frame, 24fps minute of film takes about three minutes on an M-series laptop at `--workers=6`.
+也可通过 `/painted-animation` 直接调用。技能会创建项目、量拍、写故事、提交分镜、逐个镜头制作并审查，并在完整渲染前询问应在本地还是云端执行。渲染很快，因为一帧只是若干路径填充：1350 帧、24fps 的一分钟成片，M 系笔记本上 `--workers=6` 约三分钟。
 
-## Repository Structure
+## 目录结构
 
-| Path | Description |
+| 路径 | 说明 |
 |---|---|
-| `SKILL.md` | Workflow and rules followed by Claude |
-| `template/` | Animation engine: character, brushes, camera, transitions, karaoke, renderer |
-| `scripts/new_project.sh` | Project scaffolding and toolchain check |
-| `scripts/beat_grid.py` | Tempo and beat-phase detection with LRC line alignment |
-| `references/music-video.md` | Guidelines for music videos and longer productions |
-| `examples/xiaozhen/` | Storyboard and scene code for the example above |
+| `SKILL.md` | Claude 遵循的工作流程与规则 |
+| `template/` | 动画引擎：角色、笔刷、镜头、转场、卡拉 OK、渲染器 |
+| `scripts/new_project.sh` | 项目初始化与环境检查 |
+| `scripts/beat_grid.py` | 节拍与相位检测，并将 LRC 歌词对齐到节拍 |
+| `references/design-first.md` | 设计顺序与判据：故事、节奏、场景、色彩 |
+| `references/music-video.md` | 长片与多章节 MV 的制作规范 |
+| `references/checklist.md` | 交付前的自检清单与已知失败模式 |
+| `examples/xiaozhen/` | 上述示例的分镜与场景代码 |
 
-## Acknowledgements
+## 致谢
 
-The animation engine and guide are adapted from [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase) by John Heibel (MIT License; see [template/LICENSE](template/LICENSE)). The overall method follows his [PDoomVideo](https://github.com/JohnHeibel/PDoomVideo). The project uses p5.js, Puppeteer and ffmpeg. The skill and the example were produced with Claude Opus 5.5 in Claude Code.
+动画引擎与动画指南改编自 John Heibel 的 [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase)（MIT 协议，见 [template/LICENSE](template/LICENSE)），整体方法参照其 [PDoomVideo](https://github.com/JohnHeibel/PDoomVideo)。本项目使用了 p5.js、Puppeteer 与 ffmpeg。技能本身及示例由 Claude Opus 5.5 在 Claude Code 中完成。
 
-## License
+## 许可协议
 
-MIT. See the repository [LICENSE](../../LICENSE).
+MIT，见仓库的 [LICENSE](../../LICENSE)。
