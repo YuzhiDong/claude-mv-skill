@@ -94,6 +94,11 @@ contact sheet、静帧、短 strip 这类几帧的预览，可以直接在当前
 node render.mjs --clip --out=out/video.mp4                                   # 短片，单线程
 node render.mjs --frames --workers=4 && node render.mjs --encode --out=out/video.mp4 [--audio=assets/song.mp3]   # 长片，并行 + 可续跑
 
+# 全片预览（低帧率，看节奏/转场/色彩走向，不看细节）——约 1 分钟
+node render.mjs --animatic --step=4
+# 关键段落的 1080p 短 clip（看动作和转场质量）
+node render.mjs --clip=8.5:12.0 --out=out/check/clip-s03.mp4
+
 # 增量：只重渲改动过的镜头（比对 out/manifest.json 里的源码 mtime）
 node render.mjs --frames --dry-run              # 先看它会渲哪些，不动手
 node render.mjs --frames --only=s09,s10         # 强制只渲这两镜

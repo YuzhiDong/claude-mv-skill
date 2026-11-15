@@ -184,6 +184,32 @@ if (args.sheet || args.strip) {
   }));
   writeFileSync(MANIFEST, JSON.stringify({ at: new Date().toISOString(), fps, range: [first, last], files: srcMtimes(), shots: bounds }, null, 1));
   console.log(`manifest 已更新 → ${MANIFEST}（${bounds.length} 镜）`);
+} else if (args.animatic) {
+  // 低帧率全片预览：每 step 帧取一帧，编成 fps/step 的视频，带原曲。
+  // 用来看**节奏、转场、连续性、整片色彩走向**——不是用来看细节的（细节走 --sheet / --crop）。
+  // 一支 56 秒的片子按 step=4 约 340 帧，6 路并发 1 分钟左右。
+  const step = Math.max(2, +(args.step || 4));
+  const probe = await openPage(), len = await lengthOf(probe); await probe.close();
+  const out = args.out || 'out/animatic.mp4', dir = 'out/animatic';
+  mkdirSync(dir, { recursive: true });
+  const n = Math.ceil(len * fps / step), workers = +(args.workers || 6);
+  console.log(`animatic: 每 ${step} 帧取 1 → ${n} 帧 @ ${(fps / step).toFixed(1)}fps`);
+  let next = 0, done = 0; const start = Date.now();
+  await Promise.all(Array.from({ length: workers }, async (_, w) => {
+    const page = await openPage('#' + w);
+    while (next < n) {
+      const k = next++, f = `${dir}/f${String(k).padStart(5, '0')}.jpg`;
+      if (existsSync(f) && statSync(f).size > 1000) { done++; continue; }
+      const buf = await frameOf(page, (k * step) / fps, 'image/jpeg', .9);
+      writeFileSync(f + '.tmp', buf); renameSync(f + '.tmp', f);
+      if (++done % 24 === 0 || done === n) console.log(`animatic ${done}/${n}  ${((Date.now() - start) / done).toFixed(0)} ms/frame`);
+    }
+  }));
+  const ap = await openPage(), audio = args.audio || await ap.evaluate(() => PROJECT.audio || ''); await ap.close();
+  await run('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps / step), '-i', `${dir}/f%05d.jpg`,
+    ...(audio ? ['-i', audio, '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '128k', '-shortest'] : []),
+    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out]);
+  console.log('wrote ' + out);
 } else if (args.clip) {
   const page = await openPage(), len = await lengthOf(page);
   const [a, b] = args.range ? span(args.range) : typeof args.clip === 'string' ? span(args.clip) : [0, len];
