@@ -12,8 +12,8 @@
   function sky(t, horizon = 1.2, ripple = null) {
     boilSeed('sky');
     paint(rectPts(-600, -400, W + 1200, H + 800), { wash: PAL.night, ink: null });   // oversized: the camera pans
-    paint(ellPts(W / 2, H * .95, W * .75, H * .45 * horizon, 30, 10), { fill: PAL.violet, fillOp: 110, bleed: .3, tex: .6, ink: null });
-    paint(ellPts(W * .3, H * .15, W * .35, H * .25, 24, 10), { fill: PAL.indigo, fillOp: 90, bleed: .3, tex: .5, ink: null });
+    paint(ellPts(W / 2, H * .95, W * .75, H * .45 * horizon, 30, 10), { fill: PAL.violet, fillOp: 110, ink: null });
+    paint(ellPts(W * .3, H * .15, W * .35, H * .25, 24, 10), { fill: PAL.indigo, fillOp: 90, ink: null });
     for (let i = 0; i < 42; i++) {   // twinkling stars, each on its own clock and its own boil seed
       boilSeed('star' + i);
       const x = hash(i) * (W + 200) - 100, y = hash(i + 100) * H * .6 - 40;
@@ -27,7 +27,7 @@
   }
   function hill(cx, cy, rx, ry, col, t, tufts = 0) {
     boilSeed('hill' + cx);   // keyed by its position, which never changes
-    paint(ellPts(cx, cy, rx, ry, 40, 2), { wash: col, fill: mixCol(col, PAL.night, .35), fillOp: 90, bleed: .08, tex: .6, ink: PAL.ink, sw: 1 });
+    paint(ellPts(cx, cy, rx, ry, 40, 2), { wash: col, fill: mixCol(col, PAL.night, .35), fillOp: 90, ink: PAL.ink, sw: 1 });
     for (let i = 0; i < tufts; i++) {   // grass tufts along the top, swaying
       const a = -Math.PI / 2 + (hash(i + cx) - .5) * 1.6, x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry + 4, sw = wob(t, .5, hash(i) * 3) * 5;
       for (const k of [-1, 0, 1]) inkLine([[x + k * 7, y], [x + k * 11 + sw, y - 22 - 8 * hash(i + k)]], .7, mixCol(col, PAL.cream, .35), 'inkfine', .4);
@@ -105,7 +105,7 @@
     sky(t, 1.4, { x: 1440, y: 150, t0: t - lt + tHome });   // the sky twinkles hello when the star gets home
     hill(1300, 1180, 1300, 330, mixCol(PAL.teal, PAL.night, .45), t, 0);
     boilSeed('ground');
-    paint(rectPts(-200, G - 20, W + 400, 400, 3), { wash: mixCol(PAL.sap, PAL.night, .3), fill: mixCol(PAL.sap, PAL.night, .55), fillOp: 100, bleed: .05, tex: .6, ink: null });
+    paint(rectPts(-200, G - 20, W + 400, 400, 3), { wash: mixCol(PAL.sap, PAL.night, .3), fill: mixCol(PAL.sap, PAL.night, .55), fillOp: 100, ink: null });
     inkLine([[-200, G - 18], [W / 2, G - 24], [W + 200, G - 16]], 1, PAL.ink, 'ink', .5);
 
     const walk = stroll(lt, 0, tStop, 300, 950, u), x = walk.x;

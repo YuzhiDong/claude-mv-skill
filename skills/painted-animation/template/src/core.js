@@ -99,9 +99,9 @@ function toScreen(x, y, cam = CAM) {
 // ---------- full-frame effects (call outside a camera, in screen space) ----------
 function flash(k, col = '#FFFDF6') { if (k > .01) paint(rectPts(-60, -60, W + 120, H + 120), { wash: col, washOp: 255 * clamp(k), ink: null }); }
 // Light: glow(x, y, r, col, a) ADDS a soft halo of light for anything that shines (stars, lamps, fireflies, magic).
-// p5.brush mixes every colour like pigment, so yellow painted over blue turns green and light can't be painted; this
-// is the one non-paint mark in the kit. It lands on what's painted so far, under anything painted after it, follows
-// the camera, and boils a little. Keep a = 1 on dark grounds; on light grounds it barely shows (as light would).
+// Flat colour can't glow — an opaque wash just paints over what's under it — so this is the one additive mark in the
+// kit. It lands on what's painted so far, under anything painted after it, follows the camera, and boils a little.
+// Keep a = 1 on dark grounds; on light grounds it barely shows (as light would).
 function glow(x, y, r, col = '#FFC766', a = 1) {
   if (a <= 0 || r < 1) return;
   flushBrush();
@@ -173,9 +173,9 @@ function ribbon(P, w0, w1 = w0) {
 }
 
 // ---------- paint wrapper ----------
-// One call = one painted shape: optional flat wash, optional watercolor fill, optional hatch, optional ink outline.
-// p5.brush 2.2.3 loses strokes drawn far from the origin under a zoomed camera (from zoom ~2, an outline or a line
-// leaves only a dot at its first vertex), so every shape and line is drawn around its own centre.
+// One call = one flat shape: optional body colour (wash), optional second tone (fill), optional ink outline.
+// Every shape and line is still drawn around its own centre, so a shape built far from the origin stays stable
+// when the camera zooms (and so `boil` jitter rotates with the shape instead of sliding it).
 function centred(pts, draw) {
   if (!pts.length) return;
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;

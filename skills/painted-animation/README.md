@@ -21,7 +21,7 @@ The method is derived from two projects by John Heibel: [PDoomVideo](https://git
 ## How It Works
 
 1. **Intake and storyboard.** For a music video, Claude first requests the audio and LRC lyrics, then asks one optional natural-language question about the desired story and overall feeling, recurring imagery and anything to avoid. It never splits this into five separate questions or fields. The user may answer in one sentence or leave it blank. Claude then writes a shot list covering setting, palette, character arc and transitions. For each shot it lists the "reads", the timed sequence of what the viewer must understand.
-2. **Drawing.** Each shot is a JavaScript function that paints the complete frame with p5.js and the [p5.brush](https://github.com/acamposuribe/p5.brush) watercolour library. Every frame is a pure function of time.
+2. **Drawing.** Each shot is a JavaScript function that draws the complete frame with p5.js canvas 2D — solid colour blocks, ink outlines, a little line boil. Every frame is a pure function of time.
 3. **Review.** Small contact sheets, frame strips and close-up crops may be rendered in the cloud. Claude inspects the images and revises the code until each shot meets the guidelines.
 4. **Output.** Claude never starts a complete render without asking whether to render locally or in the cloud. Choosing local prohibits cloud full rendering and produces exact local commands instead. Frames are rendered in parallel and encoded to MP4 with ffmpeg, with audio muxed in if provided.
 
@@ -69,7 +69,7 @@ Describe the desired video in Claude Code, for example:
 
 > Make a lyric video for this song. (with the audio file, LRC file, and a short description of the story and mood)
 
-The skill can also be invoked directly with `/painted-animation`. It creates a project, presents a storyboard, builds and reviews each shot, and asks whether the full final render should run locally or in the cloud. Render times depend on the GPU; watercolour fills are considerably slower on integrated graphics.
+The skill can also be invoked directly with `/painted-animation`. It creates a project, presents a storyboard, builds and reviews each shot, and asks whether the full final render should run locally or in the cloud. Rendering is fast because a frame is only filled paths: a 1350-frame, 24fps minute of film takes about three minutes on an M-series laptop at `--workers=6`.
 
 ## Repository Structure
 
@@ -84,7 +84,7 @@ The skill can also be invoked directly with `/painted-animation`. It creates a p
 
 ## Acknowledgements
 
-The animation engine and guide are adapted from [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase) by John Heibel (MIT License; see [template/LICENSE](template/LICENSE)). The overall method follows his [PDoomVideo](https://github.com/JohnHeibel/PDoomVideo). The project uses p5.js, p5.brush, Puppeteer and ffmpeg. The skill and the example were produced with Claude Opus 5.5 in Claude Code.
+The animation engine and guide are adapted from [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase) by John Heibel (MIT License; see [template/LICENSE](template/LICENSE)). The overall method follows his [PDoomVideo](https://github.com/JohnHeibel/PDoomVideo). The project uses p5.js, Puppeteer and ffmpeg. The skill and the example were produced with Claude Opus 5.5 in Claude Code.
 
 ## License
 

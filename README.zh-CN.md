@@ -19,7 +19,7 @@
 
 ![painted-animation](skills/painted-animation/docs/xiaozhen-sheet.jpg)
 
-使用 p5.js 与水彩笔刷库 p5.brush 绘制每个镜头。角色依托一套表情库与动画原理进行表演，音乐视频按测得的节拍剪辑，歌词 MV 配有逐字卡拉 OK 字幕。示例为陶喆《小镇姑娘》的 31 秒歌词 MV。[说明文档](skills/painted-animation/README.zh-CN.md)。
+使用 p5.js 与 canvas 2D 纯平面色块（实色填充、墨线描边、轻微线条沸腾）绘制每个镜头。角色依托一套表情库与动画原理进行表演，音乐视频按测得的节拍剪辑，歌词 MV 配有逐字卡拉 OK 字幕。示例为陶喆《小镇姑娘》的 31 秒歌词 MV。[说明文档](skills/painted-animation/README.zh-CN.md)。
 
 ## 环境要求
 
@@ -70,7 +70,7 @@ ln -s ~/opus-video-skills/skills/painted-animation ~/.claude/skills/painted-anim
 
 ## 致谢
 
-painted-animation 的动画引擎与指南改编自 John Heibel 的 [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase)（MIT 协议），整体方法参照其 [PDoomVideo](https://github.com/JohnHeibel/PDoomVideo)。本项目使用了 p5.js、p5.brush、Puppeteer 与 ffmpeg。技能及示例由 Claude Opus 5.5 在 Claude Code 中完成。
+painted-animation 的动画引擎与指南改编自 John Heibel 的 [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase)（MIT 协议），整体方法参照其 [PDoomVideo](https://github.com/JohnHeibel/PDoomVideo)。本项目使用了 p5.js、Puppeteer 与 ffmpeg。技能及示例由 Claude Opus 5.5 在 Claude Code 中完成。
 
 ## 许可协议
 

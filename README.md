@@ -19,7 +19,7 @@ The skill in this repository teaches Claude Opus 5.5 to produce a complete hand-
 
 ![painted-animation](skills/painted-animation/docs/xiaozhen-sheet.jpg)
 
-Draws every shot with p5.js and the p5.brush watercolour library. Characters act through a library of expressions and motion principles. Music videos are cut to the measured beat, and lyric videos carry word-by-word karaoke subtitles. Example: a 31-second lyric video for 陶喆《小镇姑娘》. [Documentation](skills/painted-animation/README.md).
+Draws every shot with p5.js and flat canvas 2D blocks — solid colour, ink outlines, a little line boil. Characters act through a library of expressions and motion principles. Music videos are cut to the measured beat, and lyric videos carry word-by-word karaoke subtitles. Example: a 31-second lyric video for 陶喆《小镇姑娘》. [Documentation](skills/painted-animation/README.md).
 
 ## Requirements
 
@@ -70,7 +70,7 @@ A new style is a new directory under `skills/` containing a `SKILL.md`, a runnab
 
 ## Acknowledgements
 
-The painted-animation engine and guide are adapted from [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase) by John Heibel (MIT License), and the method follows his [PDoomVideo](https://github.com/JohnHeibel/PDoomVideo). The project uses p5.js, p5.brush, Puppeteer and ffmpeg. The skill and examples were produced with Claude Opus 5.5 in Claude Code.
+The painted-animation engine and guide are adapted from [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase) by John Heibel (MIT License), and the method follows his [PDoomVideo](https://github.com/JohnHeibel/PDoomVideo). The project uses p5.js, Puppeteer and ffmpeg. The skill and examples were produced with Claude Opus 5.5 in Claude Code.
 
 ## License
 

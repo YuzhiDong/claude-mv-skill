@@ -21,7 +21,7 @@
 ## 技术原理
 
 1. **素材收集与分镜。** 制作音乐 MV 时，Claude 会先索取歌曲音频和 LRC 歌词文件，再用一个可留空的自然问题，一次性询问用户希望呈现的故事与整体感觉、想贯穿的画面元素以及需要避开的内容。禁止拆成五个问题或五项表单；用户只需回答一句话，也可以留空。随后编写镜头表，确定场景、配色、角色情绪线与转场方式。每个镜头都列出观众需要依次理解的信息，并为每条信息分配时间。
-2. **绘制。** 每个镜头是一个 JavaScript 函数，使用 p5.js 与水彩笔刷库 [p5.brush](https://github.com/acamposuribe/p5.brush) 绘制完整画面。每一帧都由时间唯一确定。
+2. **绘制。** 每个镜头是一个 JavaScript 函数，用 p5.js 的 canvas 2D 画出完整画面——实色块、墨线描边、轻微线条沸腾。每一帧都由时间唯一确定。
 3. **审查。** 少量关键帧拼图、短逐帧序列与局部特写可以在云端渲染，由 Claude 检查画面并修改代码，直至每个镜头符合规范。
 4. **输出。** Claude 禁止未经询问直接开始完整渲染，必须让用户明确选择本地或云端。选择本地后禁止云端全量渲染，并改为提供准确的本地执行命令。各帧并行渲染后，由 ffmpeg 编码为 MP4；如提供音频，一并合入。
 
@@ -69,7 +69,7 @@
 
 > 为这首歌制作歌词 MV。（附音频文件、LRC 文件，并说明歌曲的大致故事和意境）
 
-也可通过 `/painted-animation` 直接调用。技能会创建项目、提交分镜、逐个镜头制作并审查，并在完整渲染前询问应在本地还是云端执行。渲染耗时取决于显卡性能；在集成显卡上，水彩填充会明显变慢。
+也可通过 `/painted-animation` 直接调用。技能会创建项目、提交分镜、逐个镜头制作并审查，并在完整渲染前询问应在本地还是云端执行。渲染很快，因为一帧只是若干路径填充：1350 帧、24fps 的一分钟成片，M 系笔记本上 `--workers=6` 约三分钟。
 
 ## 目录结构
 
@@ -84,7 +84,7 @@
 
 ## 致谢
 
-动画引擎与动画指南改编自 John Heibel 的 [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase)（MIT 协议，见 [template/LICENSE](template/LICENSE)），整体方法参照其 [PDoomVideo](https://github.com/JohnHeibel/PDoomVideo)。本项目使用了 p5.js、p5.brush、Puppeteer 与 ffmpeg。技能本身及示例由 Claude Opus 5.5 在 Claude Code 中完成。
+动画引擎与动画指南改编自 John Heibel 的 [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase)（MIT 协议，见 [template/LICENSE](template/LICENSE)），整体方法参照其 [PDoomVideo](https://github.com/JohnHeibel/PDoomVideo)。本项目使用了 p5.js、Puppeteer 与 ffmpeg。技能本身及示例由 Claude Opus 5.5 在 Claude Code 中完成。
 
 ## 许可协议
 

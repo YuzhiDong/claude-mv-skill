@@ -74,7 +74,7 @@ function clawd(x, y, u, o = {}) {
   rs('shadow');
   if (!o.noShadow) {
     const f = 1 - Math.min(.5, Math.abs(o.dy || 0) * .06), w = (V.R - V.L) / 10;
-    paint(ellPts(x, y + u * .15, u * 5.6 * f * w, u * f, 22), { fill: PAL.ink, fillOp: 90, bleed: .25, tex: .3, border: .1, ink: null });
+    paint(ellPts(x, y + u * .15, u * 5.6 * f * w, u * f, 22), { fill: PAL.ink, fillOp: 90, ink: null });
   }
   if (sm > .05) smearTrail(x, y + dy, u, V, sm, o.smearDir ?? (o.flip ? -1 : 1), col);
 
@@ -90,11 +90,11 @@ function clawd(x, y, u, o = {}) {
     push(); translate((px + dir * .55 * clamp((Math.abs(a) - .7) / .9)) * u, -4.5 * u);
     if (dir === 0) {   // side view: the near arm reaches forward past the front edge; a raises it, a < 0 lowers it
       translate(0, .3 * u); rotate(.7 - a);
-      paint(rectPts(-.2 * u, -.45 * u, 2.3 * u, .9 * u, J * .6), { wash: col, washOp: 255, fill: dk, fillOp: 60, tex: .5, ink: PAL.ink, sw: sw * .8 });
+      paint(rectPts(-.2 * u, -.45 * u, 2.3 * u, .9 * u, J * .6), { wash: col, washOp: 255, fill: dk, fillOp: 60, ink: PAL.ink, sw: sw * .8 });
       if (hook) { translate(2.1 * u, 0); hook(u, sw); }
     } else {
       rotate(dir < 0 ? a : -a);
-      paint(rectPts(dir < 0 ? -2.2 * u : 0, -.5 * u, 2.2 * u, u, J * .6), { wash: layer === 2 ? mixCol(col, dk, .4) : col, washOp: 255, fill: dk, fillOp: 60, tex: .5, ink: PAL.ink, sw: sw * .8 });
+      paint(rectPts(dir < 0 ? -2.2 * u : 0, -.5 * u, 2.2 * u, u, J * .6), { wash: layer === 2 ? mixCol(col, dk, .4) : col, washOp: 255, fill: dk, fillOp: 60, ink: PAL.ink, sw: sw * .8 });
       if (hook) { translate(dir * 2.2 * u, 0); if (dir < 0) scale(-1, 1); hook(u, sw); }
     }
     pop();
@@ -121,10 +121,10 @@ function clawd(x, y, u, o = {}) {
     const L = V.L * u, R = V.R * u, wk = (V.R - V.L) / 10, body = rectPts(L, -8 * u, R - L, 6 * u, J);
     paint(body, { wash: col, washOp: 255, ink: null });
     const px = V.strip ? (V.strip[0] < 0 ? (V.seam + V.R) / 2 - 1.2 : (V.L + V.seam) / 2 - .6) : -1.6 * wk;
-    paint(ellPts(px * u, -6.4 * u, 3.4 * u * (V.strip ? .75 : wk), 1.5 * u, 18, J * 2, -.08), { fill: lt, fillOp: V.back ? 80 : 120, bleed: .2, tex: .85, border: .8, ink: null });
-    paint(rectPts(L + .2 * u, -3.8 * u, R - L - .4 * u, 1.6 * u, J), { fill: dk, fillOp: 120, bleed: .03, tex: .7, border: .5, ink: null });
+    paint(ellPts(px * u, -6.4 * u, 3.4 * u * (V.strip ? .75 : wk), 1.5 * u, 18, J * 2, -.08), { fill: lt, fillOp: V.back ? 80 : 120, ink: null });
+    paint(rectPts(L + .2 * u, -3.8 * u, R - L - .4 * u, 1.6 * u, J), { fill: dk, fillOp: 120, ink: null });
     if (V.strip) {
-      paint(rectPts(V.strip[0] * u, -8 * u, (V.strip[1] - V.strip[0]) * u, 6 * u, J * .5), { fill: dk, fillOp: 150, bleed: .04, tex: .6, border: .4, ink: null });
+      paint(rectPts(V.strip[0] * u, -8 * u, (V.strip[1] - V.strip[0]) * u, 6 * u, J * .5), { fill: dk, fillOp: 150, ink: null });
       inkLine([[V.seam * u + jit(J), -7.9 * u], [V.seam * u + jit(J), -5 * u], [V.seam * u + jit(J), -2.1 * u]], sw * .55, PAL.ink, 'inkfine', 0);
     }
     paint(body, { ink: PAL.ink, sw });
@@ -165,7 +165,7 @@ function lunchbox(u, o, sw, J, lid, col, dk, lt) {
   };
   // lower jaw
   paint(rectPts(-5 * u, hy, 10 * u, 3.1 * u, J), { wash: col, washOp: 255, ink: null });
-  paint(rectPts(-4.8 * u, -3.8 * u, 9.6 * u, 1.6 * u, J), { fill: dk, fillOp: 120, bleed: .03, tex: .7, border: .5, ink: null });
+  paint(rectPts(-4.8 * u, -3.8 * u, 9.6 * u, 1.6 * u, J), { fill: dk, fillOp: 120, ink: null });
   // the open mouth: a dark wedge from the hinge to the lid's far corner, with the tongue lying in it
   paint([[-5 * u, hy], [5 * u, hy], [-5 * u + 10 * u * Math.cos(A), hy - 10 * u * Math.sin(A)]], { wash: '#4A1F2A', ink: null });
   const th = Math.min(.5 * u, .3 * gap(1.8 * u));
@@ -175,7 +175,7 @@ function lunchbox(u, o, sw, J, lid, col, dk, lt) {
   // lid
   push(); translate(-5 * u, hy); rotate(-A); translate(5 * u, -hy);
   paint(rectPts(-5 * u, -8 * u, 10 * u, 2.9 * u, J), { wash: col, washOp: 255, ink: null });
-  paint(ellPts(-1.6 * u, -6.9 * u, 3.2 * u, 1 * u, 16, J), { fill: lt, fillOp: 110, bleed: .15, tex: .8, border: .8, ink: null });
+  paint(ellPts(-1.6 * u, -6.9 * u, 3.2 * u, 1 * u, 16, J), { fill: lt, fillOp: 110, ink: null });
   for (let i = 0; i < 5; i++) tooth(-3.6 * u + i * 1.6 * u, 1);
   paint(rectPts(-5 * u, -8 * u, 10 * u, 2.9 * u, J), { ink: PAL.ink, sw });
   if (o.gloom > .02) gloom(u, sw, VIEWS.front, o.gloom);
@@ -197,7 +197,7 @@ function smearTrail(x, y, u, V, k, dir, col) {
 // Gloom: a dark wash over the forehead with hanging gloom lines (despair, dread, a guilty conscience).
 function gloom(u, sw, V, g) {
   const L = V.L * u, R = V.R * u;
-  paint(rectPts(L + .15 * u, -7.9 * u, R - L - .3 * u, 2.6 * u, u * .05), { fill: PAL.indigo, fillOp: 150 * g, bleed: .08, tex: .5, border: .6, ink: null });
+  paint(rectPts(L + .15 * u, -7.9 * u, R - L - .3 * u, 2.6 * u, u * .05), { fill: PAL.indigo, fillOp: 150 * g, ink: null });
   const n = Math.round((V.R - V.L) * .7);
   for (let i = 0; i < n; i++) { const gx = lerp(L + .7 * u, R - .7 * u, i / Math.max(1, n - 1)); inkLine([[gx, -7.8 * u], [gx + jit(u * .05), (-7.8 + 2.4 * g * (.7 + .3 * hash(i))) * u]], sw * .45, PAL.ink, 'inkfine', 0); }
 }
@@ -205,7 +205,7 @@ function gloom(u, sw, V, g) {
 function blush(u, sw, F, b) {
   for (const s of F.sides) {
     const bx = s * F.bx * u;
-    paint(ellPts(bx, -4.6 * u, u * .85, u * .42, 14), { fill: PAL.rose, fillOp: 170 * clamp(b), bleed: .2, ink: null });
+    paint(ellPts(bx, -4.6 * u, u * .85, u * .42, 14), { fill: PAL.rose, fillOp: 170 * clamp(b), ink: null });
     if (b > .6) for (let k = 0; k < 3; k++) inkLine([[bx - .5 * u + k * .4 * u, -4.35 * u], [bx - .3 * u + k * .4 * u, -4.85 * u]], sw * .4, mixCol(PAL.rose, PAL.ink, .3), 'inkfine', 0);
   }
 }
@@ -297,11 +297,11 @@ function eye(e, s, u, o, sw) {
       break;
     case 'blank': paint(ellPts(0, 0, u * .8, u * 1.05, 14), { wash: PAL.cream, ink: PAL.ink, sw: sw * .7 }); break;
     case 'spark':
-      paint(ellPts(0, 0, u * 1.5, u * 1.5, 18), { fill: PAL.ochre, fillOp: 90, bleed: .3, ink: null });
+      paint(ellPts(0, 0, u * 1.5, u * 1.5, 18), { fill: PAL.ochre, fillOp: 90, ink: null });
       paint(starPts(0, 0, u * 1.35 * (1 + .12 * Math.sin(T * 14))), { wash: PAL.cream, fill: PAL.ochre, fillOp: 80, ink: PAL.ink, sw: sw * .55 });
       break;
     case 'red':
-      paint(ellPts(0, 0, u * 1.7, u * 1.7, 18), { fill: '#E0283F', fillOp: 110, bleed: .35, ink: null });
+      paint(ellPts(0, 0, u * 1.7, u * 1.7, 18), { fill: '#E0283F', fillOp: 110, ink: null });
       paint(rectPts(-.6 * u, -u, 1.2 * u, 2 * u, u * .05), { wash: '#FF2F4A', ink: PAL.ink, sw: sw * .5 });
       break;
     case 'heart': paint(heartPts(0, .1 * u, u * .9 * (1 + .1 * pulse(T))), { wash: '#E2476E', ink: PAL.ink, sw: sw * .5 }); break;
@@ -522,7 +522,7 @@ function emote(kind, x, y, s, k = 1, age = T) {
         c.push([Math.cos(a) * 2.8 * s * (up ? r * .92 : 1), bob - .2 * s + Math.sin(a) * (up ? 1.35 : .7) * s * r]);
       }
       for (let i = 0; i < 6; i++) { const ph = frac(age * 2.4 + hash(i)), rx = (-2 + i * .8) * s, ry = (.7 + ph * 2) * s; inkLine([[rx, ry], [rx - .12 * s, ry + .7 * s]], sw * 1.1, mixCol(PAL.sky, PAL.indigo, .3), 'ink', 0); }
-      paint(c, { wash: '#A3A8C4', fill: PAL.indigo, fillOp: 70, bleed: .1, ink: PAL.ink, sw: sw * .8, curv: .4 });
+      paint(c, { wash: '#A3A8C4', fill: PAL.indigo, fillOp: 70, ink: PAL.ink, sw: sw * .8, curv: .4 });
       break;
     }
   }
