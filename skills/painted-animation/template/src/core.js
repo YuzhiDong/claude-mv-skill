@@ -183,18 +183,33 @@ function centred(pts, draw) {
   push(); translate(cx, cy); draw(pts.map(([x, y]) => [x - cx, y - cy])); pop();
 }
 function paint(pts, o = {}) { centred(pts, (P) => paintAt(P, o)); }
+// STYLE 三档（window.STYLE，由 render.mjs --style 注入）：
+//   'A' 纯平   —— 只留一层纯色，关掉所有明暗填充。色块硬边，最像矢量动画
+//   'B' 体积   —— 纯色 + 同色系明暗层（默认）。有体积但边缘仍是色块
+//   'C' 描边   —— B 再加一圈墨线勾边。赛璐璐／漫画感
 function paintAt(pts, o) {
+  const ST = window.STYLE || 'B';
   if (o.wash || o.fill || o.hatch) {
     if (o.wash) brush.wash(o.wash, o.washOp ?? 255); else brush.noWash();
-    if (o.fill) { brush.fill(o.fill, o.fillOp ?? 170); brush.fillBleed(o.bleed ?? .1); brush.fillTexture((o.tex ?? .4) * (window.TEX_K ?? 1), (o.border ?? .35) * (window.BORDER_K ?? 1)); } else brush.noFill();
+    // A 档不要明暗：一层纯色到底，避免色块内部出现"软阴影"
+    if (o.fill && ST !== 'A') { brush.fill(o.fill, (o.fillOp ?? 170) * (window.FILL_K ?? 1)); brush.fillBleed(o.bleed ?? .1); brush.fillTexture((o.tex ?? .4) * (window.TEX_K ?? 1), (o.border ?? .35) * (window.BORDER_K ?? 1)); } else brush.noFill();
     if (o.hatch) { brush.hatch(o.hatch.d, o.hatch.a, o.hatch.o || { rand: .15 }); brush.hatchStyle(o.hatch.b || 'HB', o.hatch.c || PAL.ink, o.hatch.w || 1); } else brush.noHatch();
     brush.noStroke();
     if (o.curv) { brush.beginShape(o.curv); for (const p of pts) brush.vertex(p[0], p[1]); brush.endShape(true); }
     else brush.polygon(pts);
   }
   // the outline is one continuous tapered stroke, not a stroke per side
-  if (o.ink !== null) {
-    brush.noWash(); brush.noFill(); brush.noHatch(); brush.set(o.br || 'ink', o.ink || PAL.ink, o.sw ?? 1);
+  // C 档额外给"实体"补边：不透明的层（washOp ≥ 200）就算场景里写了 ink:null 也要勾出来，
+  // 半透明的氛围层（雨幕、光晕、水渍）跳过，否则整张画面全是黑框。
+  let forceInk = false;
+  if (ST === 'C' && (o.washOp ?? 0) >= 200) {
+    // 尺寸门槛：火星、光点、小碎块不勾边，否则天空里全是小黑圈
+    let mnx = 1e9, mxx = -1e9, mny = 1e9, mxy = -1e9;
+    for (const p of pts) { if (p[0] < mnx) mnx = p[0]; if (p[0] > mxx) mxx = p[0]; if (p[1] < mny) mny = p[1]; if (p[1] > mxy) mxy = p[1]; }
+    forceInk = Math.max(mxx - mnx, mxy - mny) >= 26;
+  }
+  if (o.ink !== null || forceInk) {
+    brush.noWash(); brush.noFill(); brush.noHatch(); brush.set(o.br || 'ink', o.ink || PAL.ink, o.sw ?? (forceInk ? 1.6 : 1));
     brush.beginShape(o.curv || 0); for (const p of pts) brush.vertex(p[0], p[1]); brush.endShape(true);
   }
 }
