@@ -28,6 +28,17 @@ For every music video, complete this intake before storyboarding or scene implem
 3. Confirm the received files and summarize the creative direction inferred from the single answer. Internally extract story, emotion, atmosphere / imagery, visual motif and content to avoid; do not ask the user to answer those five categories separately. Treat a blank answer as "no preference", not as missing input, and propose an appropriate interpretation during storyboarding. If the audio or LRC file is missing, pause the music-video workflow and request it.
 4. Measure the tempo with `scripts/beat_grid.py`; lyric lines are usually faster than you'd guess. Treat the provided audio and LRC as the timing source of truth.
 
+### 0.5 Design the world before the shots
+
+**Write two tables before the storyboard**: a **scene table** (place / foreground-midground-background / camera
+move) and a **colour table** (each section's key colour and its light source). One place for the whole video reads
+as "unfinished", no matter how good the storyboard is — a real 56 s MV failed exactly this way *after* the
+storyboard had been approved, and the note back was "the scenes are monotonous, and the grey background runs
+through the whole thing". Also pick a **different composition skeleton** for each place, and keep scene shots at
+`zoom 0.74–0.92` so the setting, not the character, fills the frame.
+
+Full templates, the six composition skeletons, and the one-image self-check: [references/design-first.md](references/design-first.md).
+
 ### 1. Storyboard before code
 
 Write `STORYBOARD.md` in the project (format in the guide: logline, world + palette arc, motif, the character's emotion arc, then shots with **reads** — the timed list of what the viewer must understand). Worked example: [examples/xiaozhen/](examples/xiaozhen/) (a 31 s lyric video: storyboard and full scene code).
@@ -56,7 +67,11 @@ Contact sheets, stills, short strips and other few-frame previews may be rendere
 
 ### 4. Render the video
 
-Never start a complete render directly. After preview review is finished, tell the user that complete cloud rendering can be very slow and ask explicitly whether they want the final video rendered locally or in the cloud. Wait for their answer; storyboard approval, preview approval, or a previous general instruction to proceed is not render authorization.
+Never start a complete render directly. After preview review is finished, tell the user that complete cloud rendering can be very slow and ask explicitly whether they want the final video rendered locally or in the cloud.
+
+**Exception — you are already on the user's machine.** If the agent runs on the same computer as the user (the
+normal local setup), there is no local-vs-cloud choice to make. State the frame count and the estimated time, then
+render locally. Don't ask a question whose answer is already settled by where you are running. Wait for their answer; storyboard approval, preview approval, or a previous general instruction to proceed is not render authorization.
 
 - If the user chooses local rendering, cloud full rendering is prohibited. Do not start the full sequence in the cloud unless the user later explicitly changes their choice. Finish the validated project files, ask for the local operating system if unknown, and provide the exact prerequisite, `npm install`, frame-render and encode commands for that platform. Keep preview images available so the user knows what was approved.
 - If the user chooses cloud rendering, confirm the expected duration, frame count and likely cost/time, then proceed with the resumable multi-worker render.
@@ -83,6 +98,16 @@ These are the guide's rules condensed; the guide is authoritative.
 
 ## Engine gotchas
 
+- **`wash` is opaque, `fill` is translucent watercolour — and this will burn you.** A background painted only with
+  `fill` never covers the paper: it looks washed out and stays pale no matter how dark you make the hex. Lay down
+  `wash` first (`washOp: 255`), then stack `fill` on top for texture. Four rounds of rework came out of this one.
+- **Colours mix like pigment, so a yellow `fill` over a blue-grey ground turns green.** Anything that must keep
+  its own colour (an umbrella, a costume) needs `wash: col, washOp: 255` as the base; use `fill` only for shading
+  and highlights.
+- **A shape far bigger than the canvas silently loses its fill.** A 3920×2280 background rect renders as bare
+  paper. Keep background rects within ~1.5× the canvas.
+- **`paint` is deferred, but `glow` calls `flushBrush()`.** So `glow` has to be drawn *after* the paints it is
+  meant to light — otherwise the queued paints land on top of it and the light vanishes.
 - **Pure functions of `t`.** Frames render in parallel and out of order: no state across frames, no `Math.random()`, no frame-by-frame physics. `hash(i)` for stable randomness, `jit()` for boil.
 - **`boilSeed(key)`** before each separate background element/prop, or a moving thing makes everything drawn after it re-boil every frame (jitter).
 - **Don't name globals after p5's.** p5 defines `line`, `OVERLAY`, `text`, `color`, `scale`, … as globals; a top-level `function line()` fails with `Cannot redefine property` and the page never becomes ready (the renderer times out). Keep helpers inside the scene IIFE or give them distinct names.
@@ -91,6 +116,20 @@ These are the guide's rules condensed; the guide is authoritative.
 - Under camera zoom ≳ 2, huge shapes lose outlines; outline weight scales with zoom, so scale `sw` down in close-ups.
 - Cost = number of fills and strokes. Aim for ≤ ~1.5–2.5 s/frame (the log prints ms/frame). Prefer fewer, bigger shapes. On machines without a real GPU, watercolour fills are slow — consider fewer `fill` shapes, or `--soft-gl` as a last resort.
 - macOS: the renderer uses `--use-angle=metal` and finds `/Applications/Google Chrome.app` automatically; otherwise pass `--chrome=<path>`.
+
+## Chinese lyrics, fonts and timing
+
+- **Reuse an existing lyric timing file.** A project that already has per-line or per-character timings
+  (`content/lyric-timing.json`, an LRC, an SRT) is a frozen artefact — take it, don't re-derive it. Re-running
+  vocal separation "to be safe" burns the most expensive step of the whole job for nothing.
+- **Never guess Chinese lyrics with ASR.** Whisper-family models are unreliable on sung Mandarin, and a wrong
+  character on screen is worse than no subtitle at all. Get the text from the user, an LRC, or a lyric site; get
+  the timing from the existing file.
+- **`karaoke.js` already handles CJK.** `KFONT` is `"Ma Shan Zheng", "Kaiti SC", "STKaiti", serif` — the brush font
+  comes from Google Fonts and falls back to the system Kai face, so it still renders behind a firewall. Check one
+  frame with text before committing to a full render.
+- **`beat_grid.py` prints two BPMs.** The fast pulse and the half-time one (e.g. 143.55 and 70.30). For a ballad
+  take the **smaller** number, or every idle and bounce will look frantic.
 
 ## Adapting
 

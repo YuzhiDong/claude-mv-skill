@@ -275,6 +275,38 @@ node render.mjs --encode --out=out/video.mp4                    # … then encod
   - Cost is the number of `fill` shapes and strokes: hundreds are fine, thousands are not. Aim for ≤ 1.5 s per frame. The render log prints ms/frame.
   - Some scenes make p5.brush log five `WebGL: INVALID_OPERATION ... not from the associated program` warnings once per page. They're harmless (frames come out identical). Any other page error is real.
 
+### The four things that will burn you
+
+These cost four rounds of rework on one video. Read them before you paint a background.
+
+1. **`wash` is opaque; `fill` is translucent watercolour.** They are not two ways of saying the same thing.
+   A background painted only with `fill` never covers the paper — it reads as washed out and stays pale no matter
+   how dark you make the hex, because one layer of watercolour over paper is *always* light. The fix is to lay down
+   `wash` first and stack `fill` for texture:
+
+   ```js
+   // wrong: pale no matter what colour you give it
+   paint(rectPts(...), { fill: '#233450', fillOp: 255, bleed: .3, tex: .6, ink: null });
+   // right: an opaque base, then watercolour on top of it
+   paint(rectPts(...), { wash: '#233450', washOp: 255,
+                         fill: '#2E4060', fillOp: 70, bleed: .3, tex: .55, border: 1.2, ink: null });
+   ```
+
+   Rule of thumb: **backgrounds and anything that must read as "solid" start with `wash`; `fill` is for skies,
+   shading, haze and bleed.** Characters are already `wash`-based inside `clawd()`, which is why they never wash out.
+
+2. **Colours mix like pigment, so a yellow `fill` over a blue-grey ground turns green.** Anything that must keep
+   its own colour — an umbrella, a costume, a sign — needs `wash: col, washOp: 255` as its base, with `fill` used
+   only for shading and highlights. Painting a yellow umbrella with `fill` over a rainy background gives you a
+   grey-green umbrella and a bug report you can't reproduce.
+
+3. **A shape far bigger than the canvas silently loses its fill.** A background rect of 3920×2280 (twice the
+   canvas) renders as bare paper with no error and no warning. Keep background rects within ~1.5× the canvas;
+   if you need to cover more, tile several of them.
+
+4. **`paint` is deferred but `glow()` calls `flushBrush()`.** `glow` composites immediately, so every paint still
+   queued behind it lands *on top of the light*. Draw the light after the things it lights, not before.
+
 ### Time and motion (all pure functions of t)
 
 - **Progress and keys:**
