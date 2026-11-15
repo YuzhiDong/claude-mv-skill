@@ -20,6 +20,11 @@
   <canvas id="out" width="1920" height="1080"></canvas>
   <div class="bar"><input id="scrub" type="range" min="0" max="11" step="0.0417" value="0"><span id="tt">loading…</span></div>
 </main>
+<!-- 锚点标定：?anchors 时每个角色身上画出 CLAWD_ANCHORS 的每一道（render.mjs --anchors）。
+     给角色挂任何东西之前先看一眼，比渲完成片再发现"挂错了位置"便宜得多。 -->
+<script>
+  if (new URLSearchParams(location.search).has('anchors')) window.CLAWD_ANCHORS_ON = true;
+</script>
 <!-- engine -->
 <script src="src/config.js"></script>
 <script src="src/core.js"></script>
@@ -29,6 +34,8 @@
 <script src="src/karaoke.js"></script>
 <!-- reference sheets (standalone loops) -->
 <script src="src/sheets.js"></script>
+<!-- 本片角色（示例：lan 是粉色的，man 是默认色）。表情一律走 lanMood / manMood —— 见 SKILL.md「引擎的坑」 -->
+<script src="src/cast.js"></script>
 <!-- your video: add a script per scene file, in order -->
 <script src="src/scenes/demo.js"></script>
 <script>

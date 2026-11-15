@@ -154,6 +154,16 @@ ffmpeg -y -i out/video.mp4 -vf "scale=1280:720" -c:v libx264 -preset medium -crf
 
 这一版是**纯平面 canvas 2D**（不再依赖 p5.brush）。下面每一条都是改造时踩出来的。
 
+- **自定义颜色的角色，`emotions()` 必须传 `base`，否则换表情时角色会变回默认赭色。**
+  `emotions()` 做表情过渡时会把颜色算死写进结果——它不知道你的角色是什么颜色，就退回 `PAL.clay`。
+  粉色 Clawd 一切表情就变橙，过渡瞬间还会橙粉闪烁。正确做法是给每个角色包一层
+  `cast.js`，表情永远走带 base 的包装：`const lanMood = (t, keys) => emotions(t, keys, { base: CAST.lan })`，
+  场景里写 `lan(x, y, u, { ...lanMood(t, keys), view: 'q' })`。**不要**直接 `emotions(t, keys)` 再 spread 给
+  `lan()`——spread 顺序会让 emotion 算出的颜色盖掉角色的粉色。
+- **挂在角色身上的东西（围巾、背包、挂牌），位置一律读 `CLAWD_ANCHORS`，不许手写 y。**
+  Clawd 的身体是 -8u（头顶）到 -2u（下巴）的方块，`-7.5u` 在代码里看着像"脖子"，画出来在头顶上。
+  手写魔法数字这类错只有渲出来才看得见。引擎每个角色都会在 `?anchors`（`render.mjs --anchors`）时把
+  锚点全部画成红线标注——**写完挂件先渲一帧 `--anchors` 对一眼**，几秒钟的事，比渲完成片再返工便宜得多。
 - **2D 画布的原点在左上角，WEBGL 在中心——这一条会毁掉整张画面。** 从水彩版迁过来时，`draw()` 里有一句
   `translate(-W / 2, -H / 2)` 是为了把 WEBGL 的中心原点掰回左上角；换成 2D 后必须删掉，否则所有内容整体
   偏移半张画布。同理 `flushLetters()` 里的 `resetMatrix(); translate(-W/2,-H/2)` 也要去掉补偿。

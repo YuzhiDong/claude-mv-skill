@@ -45,11 +45,44 @@ function turn(t, t0, t1, a0, a1) {
 // ---------- colour ----------
 // Tints shift the body colour with the mood. tint: a name here or any hex colour; tintK: 0..1 strength.
 const TINT = { pale: '#F6E6D2', flush: '#E23E36', blue: '#6D86BE', rosy: '#EF8EA8', green: '#98B25E', gold: '#F0BE46' };
-function tintCols(o) {
-  const c = { col: o.col || PAL.clay, dk: o.dk || PAL.clayDk, lt: o.lt || '#F5B394' };
+// base: the character's own colours ({col, dk, lt}). Pass it whenever you tint a recoloured character, or the tint
+// falls back to the default clay and a pink Clawd turns orange the moment a mood kicks in.
+function tintCols(o, base) {
+  const b = base || o;
+  const c = { col: b.col || PAL.clay, dk: b.dk || PAL.clayDk, lt: b.lt || '#F5B394' };
   const tc = o.tint && (TINT[o.tint] || o.tint), k = clamp(o.tintK ?? 1);
   if (!tc || k <= 0) return c;
   return { col: mixCol(c.col, tc, .55 * k), dk: mixCol(c.dk, mixCol(tc, PAL.ink, .35), .5 * k), lt: mixCol(c.lt, mixCol(tc, '#FFFFFF', .4), .45 * k) };
+}
+
+// ---------- anchors ----------
+// Where things hang on Clawd, in body-local u (the same space as o.draw / o.armL / o.armR). A prop's y must be read
+// from here — never typed by hand. The body is a 10u × 6u block from y -8u (top of the head) to y -2u (chin), so a
+// scarf written at -7.5u is not "around the neck", it is on top of the head. That mistake looks plausible in code and
+// only shows up in the render, so it is worth making impossible: these values are the geometry the body is drawn from.
+// y is the same in every view (the body never changes height); x is front/back only (q and side shift the face).
+const CLAWD_ANCHORS = {
+  headTop: -8,      // top of the head, where a hat sits
+  brow: -7.05,      // forehead, under the hat
+  eyeY: -6, eyeX: 2.5,
+  mouthY: -4.3,
+  chin: -2,         // bottom edge of the body
+  neck: -2.05,      // AT the chin — a scarf / collar / tie band centre goes here, tails hang below
+  chest: -3.2,      // where a badge, apron or button sits
+  shoulderY: -4.5, shoulderX: 4.9,
+  handX: 7.05,      // arm tip, for anything held
+  footY: 0,         // the ground: (x, y) of clawd() is the point between the feet
+};
+// Draw every anchor as a cross + label. Turned on by '?anchors' (render.mjs --anchors) so a mis-placed prop can be
+// seen in one frame instead of guessed at. Nothing is drawn unless it is on, so it costs a film nothing.
+function clawdAnchorMarks(u, sw) {
+  const S = 10;
+  for (const [name, v] of Object.entries(CLAWD_ANCHORS)) {
+    if (Array.isArray(v)) continue;
+    inkLine([[-S, v * u], [S, v * u]], sw * .5, '#E23E36', 'ink', 0);
+    if (u > 7) letter(name, S * 2.4, v * u - u * .55, Math.max(9, u * .5), '#E23E36', { ink: false, font: '10px monospace' });
+  }
+  for (const sx of [-1, 1]) inkLine([[sx * CLAWD_ANCHORS.eyeX * u, -S], [sx * CLAWD_ANCHORS.eyeX * u, S]], sw * .5, '#E23E36', 'ink', 0);
 }
 
 // ---------- Clawd ----------
@@ -143,6 +176,7 @@ function clawd(x, y, u, o = {}) {
   }
   V.arms.filter(a => a[3] === 1).forEach(arm);
   rs('draw'); if (o.draw) o.draw(u, sw);
+  if (window.CLAWD_ANCHORS_ON) clawdAnchorMarks(u, sw);
   pop();
 
   rs('emote');
@@ -584,7 +618,8 @@ function feel(name, t, over = {}) {
 // Around each change the eyes squeeze shut and the body squashes just before (anticipation), and the face swaps
 // under the squint. Then a take fires (a squash-stretch the size of the new emotion's `take`), the body settles into
 // its new motion with overshoot, colour, blush and gloom cross-fade, and the new emote pops in. o.take scales every take.
-// Spread the result into clawd() and add any other pose: clawd(x, y, u, { ...emotions(t, keys), view: 'q' }).
+// Spread the result into clawd() and add any other pose: clawd(x, y, u, { ...emotions(t, keys, { base: CAST.a }), view: 'q' }).
+// Pass base ({col, dk, lt}) for any character that is not the default clay — see tintCols.
 function emotions(t, keys, o = {}) {
   let i = 0; while (i + 1 < keys.length && t >= keys[i + 1][0]) i++;
   const [tc, name, over] = keys[i], age = t - tc, cur = feel(name, t, over);
@@ -598,8 +633,14 @@ function emotions(t, keys, o = {}) {
     const base = { dy: 0, sq: 0, aL: .2, aR: .2, rot: 0, dx: 0, lookX: 0, lookY: 0 };
     const k = backOut(seg(age, 0, .4)), kc = ease(seg(age, 0, .3));
     for (const f in base) cur[f] = lerp(prev[f] ?? base[f], cur[f] ?? base[f], k);
-    const a = tintCols(prev), b = tintCols(cur);
-    cur.col = mixCol(a.col, b.col, kc); cur.dk = mixCol(a.dk, b.dk, kc); cur.lt = mixCol(a.lt, b.lt, kc); cur.tint = null;
+    // Colour cross-fades only when the character's own colours are known (o.base). Bake them into hex here and they
+    // override whatever col/dk/lt the caller spread in — so with no base, a pink character would fade to default clay.
+    // Without a base we leave tint/tintK alone and let clawd() resolve them: the colour cuts, but it stays correct.
+    if (o.base) {
+      const a = tintCols({ ...o.base, tint: prev.tint, tintK: prev.tintK });
+      const b = tintCols({ ...o.base, tint: cur.tint, tintK: cur.tintK });
+      cur.col = mixCol(a.col, b.col, kc); cur.dk = mixCol(a.dk, b.dk, kc); cur.lt = mixCol(a.lt, b.lt, kc); cur.tint = null;
+    }
     for (const f of ['blush', 'gloom', 'lid']) cur[f] = lerp(prev[f] || 0, cur[f] || 0, kc);
   }
   // takes: the one this key fires, plus the anticipation squash of the next one
