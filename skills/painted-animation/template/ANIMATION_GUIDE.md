@@ -275,6 +275,13 @@ node render.mjs --encode --out=out/video.mp4                    # … then encod
   - Cost is the number of `fill` shapes and strokes: hundreds are fine, thousands are not. Aim for ≤ 1.5 s per frame. The render log prints ms/frame.
   - Some scenes make p5.brush log five `WebGL: INVALID_OPERATION ... not from the associated program` warnings once per page. They're harmless (frames come out identical). Any other page error is real.
 
+### Flat mode (no paper, no grain)
+
+If the brief says "not watercolour", you don't need a different engine — set `flat: true` in `src/config.js`.
+That skips the paper texture in `draw()` and the multiply grain pass in `composite()`, and swaps in a flat
+neutral ground. Keep `flatFill` to decide how much pigment layering survives: `1` is pure vector-flat, `.5` keeps
+volume without looking painted. Everything else (brushes, `glow`, boiling lines) is unchanged.
+
 ### The four things that will burn you
 
 These cost four rounds of rework on one video. Read them before you paint a background.

@@ -113,6 +113,10 @@ node render.mjs --frames --workers=4 && node render.mjs --encode --out=out/video
 
 ## 改造成自己的
 
+- **不要水墨感时，开平面模式。** `src/config.js` 里加 `flat: true`——关掉宣纸纹理和颗粒（"水墨味"最重的两层），背景变成干净的色块，角色和笔触仍然保留。再用 `flatFill` 控制保留多少颜料层次：
+  - `flatFill: 1` —— 纯平，像矢量动画，颜色最干净但最"薄"；
+  - `flatFill: .5` —— 干净但有体积感（推荐起点）；
+  - 不设 `flat` 或设 `false` —— 原版水彩质感，行为完全一致。
 - Clawd 是默认主角，不是必须。新角色、道具、情绪都用同一套工具画（`paint`、`ribbon`、`through`、`glow`），并且在每个镜头里保持同一套型；新情绪加在 `src/clawd.js` 的 `EMO` 里。
 - `src/karaoke.js`（模板自带）通过 `core.js` 里的 `window.overlayHook` 钩子，给歌词视频做逐字卡拉OK。
 - `LOOPS.name = t => {...}; LOOPS.name.len = 4;` + `node render.mjs --loop=name --png` 可以做一个无缝循环，用来出 GIF（`ffmpeg -i out/loop_name/f%04d.png …`）。
