@@ -323,7 +323,9 @@ window.renderSheet = async (times, cols = 3, w = 640, crop = null, at = null) =>
 window.gpuInfo = () => { const gl = drawingContext, e = gl.getExtension('WEBGL_debug_renderer_info'); return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); };
 
 function devUI() {
-  const s = document.getElementById('scrub'), lab = document.getElementById('tt'); s.max = window.LOOP ? window.LOOP.len : DUR;
+  const s = document.getElementById('scrub'), lab = document.getElementById('tt');
+  if (!s || !lab) return;                 // 没有时间轴的页面（总览页、导出页）不需要 devUI
+  s.max = window.LOOP ? window.LOOP.len : DUR;
   let busy = false, want = null;
   const go = async () => { if (busy) return; busy = true; while (want != null) { const t = want; want = null; const t0 = performance.now(); await window.renderAt(t); lab.textContent = `${t.toFixed(2)}s  ·  ${Math.round(performance.now() - t0)} ms/frame`; } busy = false; };
   s.addEventListener('input', () => { want = +s.value; go(); });

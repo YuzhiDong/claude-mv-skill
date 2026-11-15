@@ -21,7 +21,7 @@ description: 用代码画手绘水彩 + 沸腾墨线的动画短片（MP4）—�
 | 1 | 分镜：每镜的 reads、事件、转场、符号接力 | `STORYBOARD.md` | 否（除非用户要审） |
 | 2 | **只做前两镜，把画风钉死** | `src/scenes/s1_*.js` + 静帧 | 否 |
 | 3 | 一镜一镜铺到全片 | `src/scenes/*.js` | 否 |
-| 4 | 逐镜审片：sheet 看构图 / strip 看动 / crop 看脸 | `out/check/*.jpg` | 否 |
+| 4 | 审片三段（代价递增，见下节）：**4a 静帧 → 4b 全片总览 → 4c 动效预览** | `out/check/*.jpg`、`out/animatic.mp4` | 4a/4b 否；**4c 前报数** |
 | 5 | 出片 | `out/video.mp4` | **是**（先报帧数 + 耗时） |
 | 6 | 核验（`ffprobe`）+ 压 720p 预览 | 交付物 | 否 |
 
@@ -90,12 +90,33 @@ contact sheet、静帧、短 strip 这类几帧的预览，可以直接在当前
 
 只有几帧的预览渲染（`--sheet` / `--strip` / `--crop`，通常 ≤ 20 帧）不受此限：那是审片用的，不是产出。
 
+### 出片之前的三段审片，一段比一段贵
+
+正式渲染跑一次就是几十分钟，**所有能提前看出来的问题都要在这三段里看出来**。按代价从低到高：
+
+| 段 | 命令 | 能看出什么 | 代价 |
+|---|---|---|---|
+| **4a 静帧** | `--sheet` / `--strip` / `--crop` | 单镜的构图、表情、道具、接缝 | 每帧 0.3–0.9 s |
+| **4b 全片总览** | `node render.mjs --serve` → 浏览器开 `/overview.html` | 全片结构、场景有没有真的换、色彩弧线有没有拉开 | 0（就在浏览器里，每帧约 0.5 s） |
+| **4c 动效预览** | `node render.mjs --animatic --step=4` | 节奏、转场、动作连贯、字幕与唱词的咬合 | 约 1 分钟 / 338 帧 / 20 MB |
+
+**4b 是这套引擎里最被低估的一步。** 它把整片按每 N 秒一帧铺成一张网格，一眼就能看出"是不是一个地点讲到尾""背景是不是一片同一个颜色"——这两个问题是 contact sheet 拼图查不出来的（拼图只显示画面内容，不显示**进展**）。点任意一张直接跳到 `studio.html?t=…`，拖时间轴看那一镜前后。
+
+**4c 必须带原曲。** 不带音频的 animatic 看不出"动作有没有卡在拍子上"，而那恰恰是最容易出问题的地方。默认 `--step=4`（6 fps）：动作会略卡，但节奏和转场看得准；要更连续用 `--step=2`（12 fps，代价翻倍）。
+
+顺序不能反：**4b 通过之后再花 1 分钟跑 4c，4c 通过之后再申请正式渲染。** 反过来（先渲全片再看）就是整片返工——这件事真的发生过。
+
 ```bash
 node render.mjs --clip --out=out/video.mp4                                   # 短片，单线程
 node render.mjs --frames --workers=4 && node render.mjs --encode --out=out/video.mp4 [--audio=assets/song.mp3]   # 长片，并行 + 可续跑
 
-# 全片预览（低帧率，看节奏/转场/色彩走向，不看细节）——约 1 分钟
-node render.mjs --animatic --step=4
+# 审片一：本地服务 + 浏览器总览（0 成本，不写任何帧文件）
+node render.mjs --serve [--port=8765]
+#   → http://127.0.0.1:8765/overview.html   每 N 秒一帧铺成网格（?step=2&cols=4）
+#   → http://127.0.0.1:8765/studio.html     拖时间轴看任意一帧（?t=21.5 直接跳）
+
+# 审片二：全片预览（低帧率，看节奏/转场/色彩走向，不看细节）——约 1 分钟
+node render.mjs --animatic --step=4 [--out=out/animatic.mp4]
 # 关键段落的 1080p 短 clip（看动作和转场质量）
 node render.mjs --clip=8.5:12.0 --out=out/check/clip-s03.mp4
 

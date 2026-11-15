@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>整片总览 · whole-film overview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Shantell+Sans:wght@800&family=Ma+Shan+Zheng&display=block">
+<style>
+  :root { --bg:#141216; --card:#1e1b22; --ink:#e8e4dc; --dim:#8d8580; --warm:#e8a63c; }
+  html, body { margin:0; background:var(--bg); color:var(--ink); font:13px/1.6 system-ui, sans-serif; }
+  header { position:sticky; top:0; z-index:9; background:rgba(20,18,22,.94); backdrop-filter:blur(8px);
+           border-bottom:1px solid #2a262f; padding:14px 22px; display:flex; gap:18px; align-items:baseline; flex-wrap:wrap; }
+  h1 { font-size:16px; margin:0; font-weight:600; letter-spacing:.02em; }
+  .hint { color:var(--dim); font-size:12px; }
+  .stat { margin-left:auto; color:var(--dim); font-variant-numeric:tabular-nums; font-size:12px; }
+  .grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; padding:18px 22px 60px; max-width:2100px; }
+  figure { margin:0; background:var(--card); border:1px solid #2a262f; border-radius:5px; overflow:hidden;
+           cursor:pointer; transition:border-color .15s, transform .15s; }
+  figure:hover { border-color:var(--warm); transform:translateY(-1px); }
+  figure.done img { display:block; width:100%; }
+  .ph { aspect-ratio:16/9; display:flex; align-items:center; justify-content:center; color:#4a444f; font-size:12px; }
+  figcaption { display:flex; justify-content:space-between; padding:6px 9px; font-size:11.5px;
+               color:var(--dim); font-variant-numeric:tabular-nums; border-top:1px solid #262230; }
+  figcaption b { color:var(--ink); font-weight:500; }
+  .ok { color:#6d9e6a; }
+  .bar { height:2px; background:#2a262f; }
+  .bar i { display:block; height:100%; width:0; background:var(--warm); transition:width .2s; }
+  canvas#out { display:none; }
+</style>
+<script src="node_modules/p5/lib/p5.min.js"></script>
+<script src="node_modules/p5.brush/dist/p5.brush.js"></script>
+</head>
+<body>
+<header>
+  <h1>整片总览</h1>
+  <span class="hint">点任意一张 → 在时间轴上打开那一刻 · 每 <b id="step">—</b> 秒一帧</span>
+  <span class="stat" id="stat">准备中…</span>
+</header>
+<div class="bar"><i id="prog"></i></div>
+<canvas id="out"></canvas>
+<div class="grid" id="grid"></div>
+
+<!-- 引擎：与 studio.html 保持同样的顺序 -->
+<script src="src/config.js"></script>
+<script src="src/core.js"></script>
+<script src="src/clawd.js"></script>
+<script src="src/timeline.js"></script>
+<script src="src/karaoke.js"></script>
+<!-- 你的片子：每加一个场景文件，这里和 studio.html 都要加一行，顺序一致 -->
+<script src="src/scenes/_shared.js"></script>
+<script src="src/scenes/demo.js"></script>
+<script>
+  // 全片总览页：把整片按固定间隔铺成一张网格，用来看**结构、节奏、色彩走向**。
+  // 单帧的构图细节点进 studio.html 看，动作连贯性用 render.mjs --animatic 看。
+  //
+  //   node render.mjs --serve            # 起本地服务，浏览器开 /overview.html
+  //   /overview.html?step=2              # 每 2 秒一帧（默认）
+  //   /overview.html?step=1&cols=6       # 更密、更多列
+  const Q = new URLSearchParams(location.search);
+  const STEP = +(Q.get('step') || 2);
+  const COLS = +(Q.get('cols') || 4);
+  const TOTAL = PROJECT.duration;              // 注意：不能叫 DUR，core.js 已有同名全局常量
+
+  (async function () {
+    const grid = document.getElementById('grid'), stat = document.getElementById('stat'), prog = document.getElementById('prog');
+    grid.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+    document.getElementById('step').textContent = STEP;
+    while (!window.ready) await new Promise((r) => setTimeout(r, 100));
+
+    const times = [];
+    for (let t = Math.min(STEP / 2, TOTAL); t < TOTAL; t += STEP) times.push(+t.toFixed(2));
+    if (!times.length) times.push(0);
+
+    const caps = [];
+    for (const t of times) {
+      const f = document.createElement('figure');
+      f.innerHTML = `<div class="ph">${t.toFixed(1)}s</div><figcaption><b>${t.toFixed(1)}s</b><span>待渲</span></figcaption>`;
+      f.onclick = () => { location.href = `studio.html?t=${t}`; };
+      grid.appendChild(f);
+      caps.push(f);
+    }
+
+    const ms = [];
+    for (let i = 0; i < times.length; i++) {
+      const t = times[i], t0 = performance.now();
+      const url = await window.renderAt(t, 'image/jpeg', .86);
+      const dt = Math.round(performance.now() - t0); ms.push(dt);
+      const f = caps[i], img = new Image();
+      img.src = url; f.classList.add('done'); f.innerHTML = ''; f.appendChild(img);
+      const cap = document.createElement('figcaption');
+      cap.innerHTML = `<b>${t.toFixed(1)}s</b><span>${dt} ms</span>`;
+      f.appendChild(cap);
+      const avg = ms.reduce((a, b) => a + b, 0) / ms.length;
+      prog.style.width = `${((i + 1) / times.length * 100).toFixed(1)}%`;
+      stat.textContent = `${i + 1}/${times.length} · 平均 ${Math.round(avg)} ms/帧 · 剩余约 ${Math.ceil((times.length - i - 1) * avg / 1000)}s`;
+    }
+    stat.innerHTML = `<span class="ok">全部完成</span> · ${times.length} 帧 · 平均 ${Math.round(ms.reduce((a, b) => a + b, 0) / ms.length)} ms/帧`;
+  })();
+</script>
+</body>
+</html>
