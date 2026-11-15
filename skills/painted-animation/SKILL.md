@@ -1,13 +1,13 @@
 ---
 name: painted-animation
-description: 用代码画手绘水彩 + 沸腾墨线的动画短片（MP4）——p5.js + p5.brush 在 headless Chrome 里逐帧绘制，ffmpeg 编码；主角默认是 Clawd，也可以换成任何角色。用户要做动画、短片、卡通、MV、歌词视频、循环 GIF，或者提到"画个 Clawd 的视频""PDoomVideo / ClaudeAnimationBase 那套方法"时使用。覆盖分镜、引擎 API、音乐与 LRC 歌词同步、适合云端审片的预览方式，以及最终渲染的本地/云端选择。
+description: 用代码画纯平面色块 + 沸腾墨线的动画短片（MP4）——p5.js 作画布 + canvas 2D 原生绘制，在 headless Chrome 里逐帧渲染，ffmpeg 编码；主角默认是 Clawd，也可以换成任何角色。用户要做动画、短片、卡通、MV、歌词视频、循环 GIF，或者提到"画个 Clawd 的视频""PDoomVideo / ClaudeAnimationBase 那套方法"时使用。覆盖分镜、场景与色彩两张表、引擎 API、音乐与 LRC 歌词同步、出片前的三段审片（总结图 / animatic），以及最终渲染。
 ---
 
 # 手绘动画
 
 一套**完全用代码画短片**的方法。提炼自 [JohnHeibel/PDoomVideo](https://github.com/JohnHeibel/PDoomVideo)（一支 156 秒、由 Claude Opus 画完的 MV）和它的通用版本 [ClaudeAnimationBase](https://github.com/JohnHeibel/ClaudeAnimationBase)（MIT），后者作为 `template/` 打包在这里。
 
-**它怎么跑起来：** 每一帧都是时间 `t` 的纯函数。`studio.html` 加载 p5.js + p5.brush 和你的场景文件；每个镜头把整张 1920×1080 的画面用水彩 fill 和沸腾的墨线画出来。`render.mjs` 驱动 headless Chrome：既可以渲染 contact sheet 供审片，也可以并行渲染每一帧；最后由 ffmpeg 编成 MP4（给了音频就一起混进去）。
+**它怎么跑起来：** 每一帧都是时间 `t` 的纯函数。`studio.html` 加载 p5.js（只当画布与变换用）和你的场景文件；每个镜头把整张 1920×1080 的画面用**扁平色块 + 沸腾的墨线**画出来，绘制走原生 canvas 2D，没有笔刷、没有纸纹、没有颜料混合。`render.mjs` 驱动 headless Chrome：既可以渲染 contact sheet 供审片，也可以并行渲染每一帧；最后由 ffmpeg 编成 MP4（给了音频就一起混进去）。
 
 ## 工作流
 
@@ -136,7 +136,7 @@ ffmpeg -y -i out/video.mp4 -vf "scale=1280:720" -c:v libx264 -preset medium -crf
 汇报输出路径、时长和每帧耗时。可以顺手 `open out/video.mp4`。
 
 **交付前对照 [references/checklist.md](references/checklist.md) 逐条勾完再说话**——里面有六条硬检查、
-交付说明模板，以及一张"已经试过、别再试"的方案表（水彩的边界积色、颜料混色、并发甜点都记在里面）。
+交付说明模板，以及一张"已经试过、别再试"的方案表（手算帧号、先渲全片再看、平面版的假雾都记在里面）。
 
 ## 最重要的几条规则
 
@@ -208,15 +208,11 @@ ffmpeg -y -i out/video.mp4 -vf "scale=1280:720" -c:v libx264 -preset medium -crf
 
 ## 改造成自己的
 
-- **不要水墨感时，开平面模式。** `src/config.js` 里加 `flat: true`——关掉宣纸纹理和颗粒（"水墨味"最重的两层），背景变成干净的色块，角色和笔触仍然保留。再用 `flatFill` 控制保留多少颜料层次：
-  - `flatFill: 1` —— 纯平，像矢量动画，颜色最干净但最"薄"；
-  - `flatFill: .5` —— 干净但有体积感（推荐起点）；
-  - 不设 `flat` 或设 `false` —— 原版水彩质感，行为完全一致。
-
-  **开平面模式必须同时收掉 `fill` 的 `border`（边缘积色）和 `tex`（颜料颗粒）。** 这两个参数原本靠宣纸
-  纹理才自然；纸纹一关，积色的边缘就变成一圈清晰的"云朵状轮廓"，飘在路面和天空上像一层假雾。
-  平面模式已经把 `BORDER_K` 归零、`TEX_K` 压到 .25，所以**不要把 `flatFill` 调得太低**（否则画面太素），
-  推荐 `flatFill: .8` 起步，靠它补体积感。
+- **调色板就是美术风格。** 全套颜色在 `PAL`（`src/core.js` 顶部）和每个场景文件里的十六进制之间。
+  想让整片换一种气质，改 `PAL` 里那十几个值比改任何代码都有效——色块动画的"味道"有八成来自配色。
+- **明暗只有两三层。** 一个物体 = 底色 + 一个暗部 + 也许一个高光，全用同色系的不同明度。三层以上就开始
+  像水彩，那正是这一版去掉的东西。
+- **线条粗细是 `sw × 3.2`。** 全景 `sw` 1–2，特写 0.3–0.6。整片保持同一个系数，线条才像同一个人画的。
 - Clawd 是默认主角，不是必须。新角色、道具、情绪都用同一套工具画（`paint`、`ribbon`、`through`、`glow`），并且在每个镜头里保持同一套型；新情绪加在 `src/clawd.js` 的 `EMO` 里。
 - `src/karaoke.js`（模板自带）通过 `core.js` 里的 `window.overlayHook` 钩子，给歌词视频做逐字卡拉OK。
 - `LOOPS.name = t => {...}; LOOPS.name.len = 4;` + `node render.mjs --loop=name --png` 可以做一个无缝循环，用来出 GIF（`ffmpeg -i out/loop_name/f%04d.png …`）。
