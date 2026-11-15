@@ -117,6 +117,11 @@ node render.mjs --frames --workers=4 && node render.mjs --encode --out=out/video
   - `flatFill: 1` —— 纯平，像矢量动画，颜色最干净但最"薄"；
   - `flatFill: .5` —— 干净但有体积感（推荐起点）；
   - 不设 `flat` 或设 `false` —— 原版水彩质感，行为完全一致。
+
+  **开平面模式必须同时收掉 `fill` 的 `border`（边缘积色）和 `tex`（颜料颗粒）。** 这两个参数原本靠宣纸
+  纹理才自然；纸纹一关，积色的边缘就变成一圈清晰的"云朵状轮廓"，飘在路面和天空上像一层假雾。
+  平面模式已经把 `BORDER_K` 归零、`TEX_K` 压到 .25，所以**不要把 `flatFill` 调得太低**（否则画面太素），
+  推荐 `flatFill: .8` 起步，靠它补体积感。
 - Clawd 是默认主角，不是必须。新角色、道具、情绪都用同一套工具画（`paint`、`ribbon`、`through`、`glow`），并且在每个镜头里保持同一套型；新情绪加在 `src/clawd.js` 的 `EMO` 里。
 - `src/karaoke.js`（模板自带）通过 `core.js` 里的 `window.overlayHook` 钩子，给歌词视频做逐字卡拉OK。
 - `LOOPS.name = t => {...}; LOOPS.name.len = 4;` + `node render.mjs --loop=name --png` 可以做一个无缝循环，用来出 GIF（`ffmpeg -i out/loop_name/f%04d.png …`）。

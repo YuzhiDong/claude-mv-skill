@@ -282,6 +282,11 @@ That skips the paper texture in `draw()` and the multiply grain pass in `composi
 neutral ground. Keep `flatFill` to decide how much pigment layering survives: `1` is pure vector-flat, `.5` keeps
 volume without looking painted. Everything else (brushes, `glow`, boiling lines) is unchanged.
 
+**Turning flat mode on means also killing `fill`'s edge-bleed and pigment texture.** `border` (pigment pooling at
+the edge) and `tex` (grain inside the patch) only look natural *on paper*; with the paper gone they read as hard
+cloud-shaped outlines floating over roads and skies — fake fog. Flat mode already sets `BORDER_K = 0` and
+`TEX_K = .25`; compensate by keeping `flatFill` high (start at `.8`), not low.
+
 ### The four things that will burn you
 
 These cost four rounds of rework on one video. Read them before you paint a background.
