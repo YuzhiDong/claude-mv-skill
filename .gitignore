@@ -3,3 +3,6 @@ node_modules/
 out/
 __pycache__/
 *.wav
+
+# WorkBuddy 本地工作区数据（本地记忆，不进仓库）
+.workbuddy/
