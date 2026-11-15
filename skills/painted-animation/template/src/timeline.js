@@ -57,10 +57,31 @@ function placeholder(t) {
 }
 
 // ---------- brush wipe ----------
-// A transition: fat paint strokes sweep across to cover the frame (p 0 → .5), then drag off (p .5 → 1).
-// Cut to the next shot at p = .5, under full cover. Call it last in both shots, in screen space (outside a camera):
-//   end of shot A:   if (lt > dur - .3) brushWipe((lt - (dur - .3)) / .6);
-//   start of shot B: if (lt < .3) brushWipe(.5 + lt / .6);
+// 一道粗笔刷：p 0 → .5 铺满画面，.5 → 1 拖开。**切点必须落在 p = .5（盖满）那一帧**，
+// 差一点就是"露出半张脸就切了"。
+//
+// 不要手写 `(lt - (dur - .3)) / .6`：
+//   · 拆镜（subshot）之后 dur 是段长，笔刷会在每一段末尾乱飞；
+//   · 手算的提前量只要和切点差 0.1 秒，接缝就漏底。
+// 用下面两个助手：出点/入点都按真实时间算，p = .5 自动对齐到切点，两半颜色自动一致。
+//
+//   出镜（末帧刚好盖满）：wipeOut(t, CUT, { lead: .45, cols: COLS });
+//   入镜（首帧接着拖开）：wipeIn(lt,      { lead: .45, cols: COLS });
+//
+// CUT = 这一镜的出点（也就是下一镜的 t0）。lead ≈ 半个转场，0.4–0.6 s（70 BPM 下约一拍），别超过一拍。
+// 只有出镜没有入镜 = 盖满后硬跳；只有入镜没有出镜 = 凭空冒出色条。**一定成对写。**
+// 被 subshot 切成两镜的函数里不要写 wipe（会两段都触发或都不触发）——提到 wrapper 里：
+//   [51.30, (t, lt, dur) => { f(t, lt, dur); wipeIn(lt, { cols: COLS }); }, 's23']
+function wipeOut(t, cut, opt = {}) {
+  const lead = opt.lead ?? .45, cols = opt.cols;
+  brushWipe((t - (cut - lead)) / (lead * 2), cols);
+}
+function wipeIn(lt, opt = {}) {
+  const lead = opt.lead ?? .45, cols = opt.cols;
+  if (lt >= lead * 2) return;
+  brushWipe(.5 + lt / (lead * 2), cols);
+}
+
 function brushWipe(p, cols = [PAL.clayDk, PAL.clay]) {
   if (p <= 0 || p >= 1) return;
   const [c1, c2] = cols, n = 5, bh = (H + 420) / n + 40;
