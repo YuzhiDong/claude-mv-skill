@@ -286,7 +286,9 @@ function draw() {
   LETTERS = []; CAM = LAST_CAM = null;
   push(); translate(-W / 2, -H / 2);
   BOILN = Math.floor(T * BOIL); CLAWD_N = 0; boilSeed('frame'); noiseSeed(77);
-  image(paperG, 0, 0);
+  // PROJECT.flat: 平面模式——不铺宣纸纹理，改用一块干净的中性底。
+  // 这是给"干净色块背景 + 手绘角色"这种风格用的（见 SKILL.md「改造成自己的」）。
+  if (PROJECT.flat) { background(PROJECT.flatBg ?? 250); } else { image(paperG, 0, 0); }
   drawWorld(T);
   pop();
 }
@@ -295,8 +297,10 @@ function composite(t) {
   c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
   c.drawImage(drawingContext.canvas, 0, 0, W, H);
   drawLetters(c);
-  c.globalCompositeOperation = 'multiply'; c.drawImage(grainC, 0, 0);
-  c.globalCompositeOperation = 'source-over';
+  if (!PROJECT.flat) {                     // 平面模式：不叠颗粒和暗角
+    c.globalCompositeOperation = 'multiply'; c.drawImage(grainC, 0, 0);
+    c.globalCompositeOperation = 'source-over';
+  }
   if (window.overlayHook) window.overlayHook(c, t);   // optional crisp 2D overlay on top of the grain (e.g. karaoke, see src/karaoke.js)
 }
 window.renderAt = async (t, type = 'image/png', q = .92) => { T = t; await redraw(); composite(t); return outC.toDataURL(type, q); };
